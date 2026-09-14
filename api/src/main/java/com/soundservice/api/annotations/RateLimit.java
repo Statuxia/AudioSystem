@@ -10,4 +10,6 @@ import java.lang.annotation.Target;
 public @interface RateLimit {
 
     long requestsPerMinute();
+
+    long requestsPerSecond() default 0;
 }

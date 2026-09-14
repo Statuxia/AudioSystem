@@ -38,7 +38,7 @@ public class JobController {
     }
 
     @GetMapping(value = "/{job_id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @RateLimit(requestsPerMinute = 60)
+    @RateLimit(requestsPerMinute = 60, requestsPerSecond = 5)
     public ResponseEntity<JobStateResponse> forceCheck(@PathVariable("job_id") UUID jobId) {
         return ResponseEntity.ok(new JobStateResponse(jobId, JobStatus.IN_QUEUE, System.currentTimeMillis()));
     }

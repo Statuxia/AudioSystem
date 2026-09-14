@@ -5,6 +5,7 @@ import com.soundservice.api.dto.ApiResponse;
 import com.soundservice.api.dto.RateLimitKey;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
+import io.github.bucket4j.local.LocalBucketBuilder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -59,11 +60,21 @@ public class RateLimiterInterceptor implements HandlerInterceptor {
     }
 
     private Bucket buildBucket(RateLimit rateLimit) {
-        return Bucket.builder()
-            .addLimit(Bandwidth.builder()
-                .capacity(rateLimit.requestsPerMinute())
-                .refillIntervally(rateLimit.requestsPerMinute(), Duration.ofMinutes(1L))
-                .build())
-            .build();
+        final LocalBucketBuilder bucketBuilder = Bucket.builder();
+
+        bucketBuilder.addLimit(Bandwidth.builder()
+            .capacity(rateLimit.requestsPerMinute())
+            .refillIntervally(rateLimit.requestsPerMinute(), Duration.ofMinutes(1L))
+            .build());
+
+        if (rateLimit.requestsPerSecond() > 0) {
+            bucketBuilder.addLimit(Bandwidth.builder()
+                .capacity(rateLimit.requestsPerSecond())
+                .refillIntervally(rateLimit.requestsPerSecond(), Duration.ofSeconds(1L))
+                .build()
+            );
+        }
+
+        return bucketBuilder.build();
     }
 }
