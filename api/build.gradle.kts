@@ -27,6 +27,7 @@ dependencies {
 	testCompileOnly("org.projectlombok:lombok:1.18.48")
 	testAnnotationProcessor("org.projectlombok:lombok:1.18.48")
 
+	implementation("ch.qos.logback:logback-classic:1.5.21")
 	implementation("com.bucket4j:bucket4j_jdk17-core:8.19.0")
 }
 
