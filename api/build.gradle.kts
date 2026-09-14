@@ -26,6 +26,8 @@ dependencies {
 	annotationProcessor("org.projectlombok:lombok:1.18.48")
 	testCompileOnly("org.projectlombok:lombok:1.18.48")
 	testAnnotationProcessor("org.projectlombok:lombok:1.18.48")
+
+	implementation("com.bucket4j:bucket4j_jdk17-core:8.19.0")
 }
 
 tasks.withType<Test> {
