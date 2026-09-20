@@ -8,7 +8,7 @@ import org.springframework.context.annotation.PropertySources;
 @SpringBootApplication
 @PropertySources({
     @PropertySource("classpath:/application.properties"),
-    @PropertySource(value = "file:/etc/ws-gateway/application.properties")
+    @PropertySource(value = "file:/etc/ws-gateway/application.properties", ignoreResourceNotFound = true)
 })
 public class WsGatewayApplication {
 
