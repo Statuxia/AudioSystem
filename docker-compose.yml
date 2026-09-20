@@ -14,10 +14,14 @@ services:
     build: ./api
     networks:
       - interface
+      - kafka
   ws-gateway:
     build: ./ws-gateway
     networks:
       - interface
+      - kafka
 networks:
   interface:
+    driver: bridge
+  kafka:
     driver: bridge
