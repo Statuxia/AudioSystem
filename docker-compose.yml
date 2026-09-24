@@ -6,22 +6,28 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - api
-      - ws-gateway
+      api:
+       condition: service_healthy
+      ws-gateway:
+       condition: service_healthy
     networks:
       - interface
   api:
     build: ./api
     networks:
       - interface
-      - kafka
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/health"]
+      interval: 30s
+      start_period: 30s
   ws-gateway:
     build: ./ws-gateway
     networks:
       - interface
-      - kafka
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8081/health"]
+      interval: 30s
+      start_period: 30s
 networks:
   interface:
-    driver: bridge
-  kafka:
     driver: bridge

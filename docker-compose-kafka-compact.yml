@@ -1,4 +1,22 @@
 services:
+ kafka-topic-init:
+  image: bitnamilegacy/kafka:3.4
+  environment:
+   - KAFKA_TOPIC_PARTITIONS=1
+   - KAFKA_REPLICATION_FACTOR=1
+  entrypoint: ["/bin/sh", "-c"]
+  command: >
+    kafka-topics.sh --bootstrap-server kafka-0:9092 --create --if-not-exists
+    --topic queue --partitions $KAFKA_TOPIC_PARTITIONS --replication-factor $KAFKA_REPLICATION_FACTOR
+    &&
+    kafka-topics.sh  --bootstrap-server kafka-0:9092 --create --if-not-exists
+    --topic result --partitions $KAFKA_TOPIC_PARTITIONS --replication-factor $KAFKA_REPLICATION_FACTOR
+  restart: "no"
+  depends_on:
+   kafka-0:
+    condition: service_healthy
+  networks:
+   - kafka
  kafka-0:
   image: bitnamilegacy/kafka:3.4
   ports:
@@ -18,15 +36,15 @@ services:
    - kafka_0_data:/bitnami/kafka
   networks:
    - kafka
+  healthcheck:
+   test: ["CMD", "/opt/bitnami/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+   interval: 30s
+   start_period: 30s
  api:
   environment:
    - KAFKA_BOOTSTRAP_SERVERS=kafka-0:9092
-   - KAFKA_TOPIC_PARTITIONS=1
-   - KAFKA_REPLICATION_FACTOR=1
  ws-gateway:
   environment:
    - KAFKA_BOOTSTRAP_SERVERS=kafka-0:9092
-   - KAFKA_TOPIC_PARTITIONS=1
-   - KAFKA_REPLICATION_FACTOR=1
 volumes:
  kafka_0_data:
