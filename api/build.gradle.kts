@@ -29,6 +29,8 @@ dependencies {
 
 	implementation("ch.qos.logback:logback-classic:1.5.21")
 	implementation("com.bucket4j:bucket4j_jdk17-core:8.19.0")
+
+	implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
 }
 
 tasks.withType<Test> {

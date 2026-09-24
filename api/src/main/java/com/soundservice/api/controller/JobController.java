@@ -1,5 +1,6 @@
 package com.soundservice.api.controller;
 
+import com.fasterxml.uuid.Generators;
 import com.soundservice.api.annotations.RateLimit;
 import com.soundservice.api.dto.*;
 import com.soundservice.api.utils.PresetSettingsStorage;
@@ -34,7 +35,9 @@ public class JobController {
         @RequestPart("file") MultipartFile file,
         @RequestPart("settings") AudioSettingsRequest request
     ) {
-        return ResponseEntity.ok(new JobResponse(UUID.randomUUID()));
+        final UUID jobId = Generators.timeBasedEpochGenerator().generate(); // UUIDv7 for jobId
+
+        return ResponseEntity.ok(new JobResponse(jobId));
     }
 
     @GetMapping(value = "/{job_id}", produces = MediaType.APPLICATION_JSON_VALUE)

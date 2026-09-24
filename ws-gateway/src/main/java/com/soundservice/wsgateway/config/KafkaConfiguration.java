@@ -16,6 +16,7 @@ import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Configuration
 @EnableKafka
@@ -58,6 +59,7 @@ public class KafkaConfiguration {
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, JobResultMessage> resultContainerFactory() {
+
         final ConcurrentKafkaListenerContainerFactory<String, JobResultMessage> factory
             = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(resultConsumerFactory());
