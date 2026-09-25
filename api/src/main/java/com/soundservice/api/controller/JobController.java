@@ -3,23 +3,36 @@ package com.soundservice.api.controller;
 import com.fasterxml.uuid.Generators;
 import com.soundservice.api.annotations.RateLimit;
 import com.soundservice.api.dto.*;
+import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.service.S3PresignedService;
+import com.soundservice.api.service.S3UploadService;
 import com.soundservice.api.utils.PresetSettingsStorage;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
+import com.soundservice.api.validation.NotEmptyFile;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping(JobController.PREFIX)
+@RequiredArgsConstructor
+@Validated
 public class JobController {
 
     public static final String PREFIX = "/v1/job";
+
+    private final S3UploadService s3UploadService;
+    private final S3PresignedService s3PresignedService;
 
     @GetMapping(value = "/presets", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<PresetSettings>> presets() {
@@ -32,10 +45,20 @@ public class JobController {
     )
     @RateLimit(requestsPerMinute = 3L)
     public ResponseEntity<JobResponse> create(
-        @RequestPart("file") MultipartFile file,
-        @RequestPart("settings") AudioSettingsRequest request
+        @Valid @NotEmptyFile @RequestPart("file") MultipartFile file,
+        @Valid @RequestPart("settings") AudioSettingsRequest request
     ) {
         final UUID jobId = Generators.timeBasedEpochGenerator().generate(); // UUIDv7 for jobId
+
+        s3UploadService.upload(file, jobId);
+
+        // todo: kafka message creation, validation and s3Upload rollback if not success
+        boolean kafkaMessageUploaded = true;
+
+        if (!kafkaMessageUploaded) {
+            s3UploadService.rollback(jobId);
+            throw new JobCreationException("failed to enqueue job");
+        }
 
         return ResponseEntity.ok(new JobResponse(jobId));
     }
@@ -48,15 +71,12 @@ public class JobController {
 
     @GetMapping(value = "/{job_id}/download")
     @RateLimit(requestsPerMinute = 6)
-    public ResponseEntity<byte[]> download(@PathVariable("job_id") UUID jobId) {
-        final byte[] content = "stub".getBytes(StandardCharsets.UTF_8);
-        return ResponseEntity.ok()
-            .header(
-                HttpHeaders.CONTENT_DISPOSITION,
-                ContentDisposition.attachment().filename("stub-" + jobId).build().toString()
-            )
-            .contentType(MediaType.TEXT_PLAIN)
-            .contentLength(content.length)
-            .body(content);
+    public ResponseEntity<Void> download(
+        HttpServletRequest request,
+        @Valid @NotNull @PathVariable("job_id") UUID jobId
+    ) {
+        final PresignedGetObjectRequest presignedUrl = s3PresignedService.getPresignedUrl(request, jobId);
+        return ResponseEntity.status(HttpStatus.TEMPORARY_REDIRECT)
+            .location(presignedUrl.httpRequest().getUri()).build();
     }
 }

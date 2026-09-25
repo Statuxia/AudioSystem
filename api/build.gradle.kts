@@ -19,6 +19,7 @@ repositories {
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webmvc")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
@@ -31,6 +32,9 @@ dependencies {
 	implementation("com.bucket4j:bucket4j_jdk17-core:8.19.0")
 
 	implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
+
+	implementation("software.amazon.awssdk:s3:2.55.3")
+	implementation("org.apache.tika:tika-core:4.0.0")
 }
 
 tasks.withType<Test> {
