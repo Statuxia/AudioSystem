@@ -35,15 +35,24 @@ public class AudioFileService {
         "audio/amr"
     );
 
-    public TikaInputStream getInputStream(MultipartFile file) {
+    public TikaInputStream getInputStream(@NotNull MultipartFile file) {
+        final TikaInputStream inputStream;
         try {
-            return TikaInputStream.get(file.getInputStream());
+            inputStream = TikaInputStream.get(file.getInputStream());
         } catch (IOException e) {
+            throw new JobCreationException("failed to read file");
+        }
+
+        try {
+            inputStream.enableRewind();
+            return inputStream;
+        } catch (IOException e) {
+            log.debug("input stream already read", e);
             throw new JobCreationException("failed to read file");
         }
     }
 
-    public String getContentType(TikaInputStream inputStream) {
+    public String getContentType(@NotNull TikaInputStream inputStream) {
         final Tika tika = new Tika();
         try {
             return tika.detect(inputStream)
