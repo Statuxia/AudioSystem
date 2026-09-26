@@ -40,7 +40,7 @@ public class AudioFileService {
         try {
             inputStream = TikaInputStream.get(file.getInputStream());
         } catch (IOException e) {
-            throw new JobCreationException("failed to read file");
+            throw new JobCreationException("failed to read input stream");
         }
 
         try {
@@ -48,27 +48,30 @@ public class AudioFileService {
             return inputStream;
         } catch (IOException e) {
             log.debug("input stream already read", e);
-            throw new JobCreationException("failed to read file");
+            throw new JobCreationException("failed to enable rewind for double-read stream");
         }
     }
 
     public String getContentType(@NotNull TikaInputStream inputStream) {
         final Tika tika = new Tika();
+        final String contentType;
         try {
-            return tika.detect(inputStream)
+            contentType = tika.detect(inputStream)
                 .split(";", 2)[0] // deleting random param like charset=UTF-8
                 .trim()
                 .toLowerCase(Locale.ROOT);
         } catch (IOException e) {
-            log.error("failed to read file", e);
-            throw new JobCreationException("failed to read file");
-        } finally {
-            try {
-                inputStream.rewind();
-            } catch (IOException e) {
-                log.error("can't rewind input stream after process contentType", e);
-            }
+            log.error("failed to read stream", e);
+            throw new JobCreationException("failed to read input stream for content type");
         }
+
+        try {
+            inputStream.rewind();
+        } catch (IOException e) {
+            log.error("can't rewind input stream after process contentType", e);
+            throw new JobCreationException("failed to rewind input stream");
+        }
+        return contentType;
     }
 
     public boolean isValidAudioType(String contentType) {
