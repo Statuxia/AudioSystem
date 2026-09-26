@@ -67,19 +67,28 @@ public class AudioFileService {
     }
 
     public String getFileName(@NotNull MultipartFile multipartFile, @NotEmpty String defaultName) {
-        final String filename = multipartFile.getOriginalFilename();
+        String filename = multipartFile.getOriginalFilename();
         log.debug("filename: {}; defaultname: {}", filename, defaultName);
 
         if (!StringUtils.hasText(filename)) {
             return defaultName;
         }
 
-        final int fileType = filename.lastIndexOf(".");
-        if (fileType == -1) {
+        int directorySeparatorIndex = filename.lastIndexOf("/");
+        if (directorySeparatorIndex != -1) {
+            filename = filename.substring(directorySeparatorIndex + 1);
+        }
+
+        if (!StringUtils.hasText(filename)) {
+            return defaultName;
+        }
+
+        final int fileTypeIndex = filename.lastIndexOf(".");
+        if (fileTypeIndex == -1) {
             return filename;
         }
 
-        final String cleanName = filename.substring(0, fileType);
+        final String cleanName = filename.substring(0, fileTypeIndex);
         return StringUtils.hasText(cleanName) ? cleanName : defaultName;
     }
 }
