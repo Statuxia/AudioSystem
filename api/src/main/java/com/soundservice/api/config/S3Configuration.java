@@ -15,7 +15,7 @@ import java.net.URI;
 
 @Configuration
 @RequiredArgsConstructor
-@EnableConfigurationProperties
+@EnableConfigurationProperties(S3ConfigurationProperties.class)
 public class S3Configuration {
 
     private final S3ConfigurationProperties s3ConfigurationProperties;
