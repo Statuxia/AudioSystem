@@ -1,7 +1,7 @@
 package com.soundservice.api.controller;
 
 import com.soundservice.api.dto.ApiResponse;
-import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.exception.ApiException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,8 +28,9 @@ public class ExceptionController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    @ExceptionHandler(JobCreationException.class)
-    public ResponseEntity<ApiResponse> jobCreationException(JobCreationException exception) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(exception.getMessage()));
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiResponse> apiException(ApiException exception) {
+        return ResponseEntity.status(exception.getStatus())
+            .body(new ApiResponse(exception.getMessage(), exception.getValidationErrors()));
     }
 }
