@@ -2,6 +2,7 @@ package com.soundservice.api.service;
 
 import com.soundservice.api.config.properties.S3ConfigurationProperties;
 import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.exception.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.apache.tika.io.TikaInputStream;
@@ -30,7 +31,7 @@ public class S3UploadService {
 
         if (!audioFileService.isValidAudioType(contentType)) {
             log.debug("[{}] invalid file type", key);
-            throw new JobCreationException("invalid file type");
+            throw new ValidationException("invalid file type");
         }
 
         try {

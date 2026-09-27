@@ -2,6 +2,7 @@ package com.soundservice.api.service;
 
 import com.soundservice.api.config.properties.S3ConfigurationProperties;
 import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.exception.ValidationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -53,7 +54,7 @@ class S3UploadServiceTest {
         );
         final UUID key = UUID.randomUUID();
 
-        assertThrows(JobCreationException.class, () -> service.upload(multipartFile, key), "invalid file type");
+        assertThrows(ValidationException.class, () -> service.upload(multipartFile, key), "invalid file type");
     }
 
     @Test
