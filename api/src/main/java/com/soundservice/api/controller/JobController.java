@@ -4,6 +4,7 @@ import com.fasterxml.uuid.Generators;
 import com.soundservice.api.annotations.RateLimit;
 import com.soundservice.api.dto.*;
 import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.service.KafkaProducerService;
 import com.soundservice.api.service.S3PresignedService;
 import com.soundservice.api.service.S3UploadService;
 import com.soundservice.api.utils.PresetSettingsStorage;
@@ -33,6 +34,7 @@ public class JobController {
 
     private final S3UploadService s3UploadService;
     private final S3PresignedService s3PresignedService;
+    private final KafkaProducerService kafkaProducerService;
 
     @GetMapping(value = "/presets", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<PresetSettings>> presets() {
@@ -52,8 +54,14 @@ public class JobController {
 
         s3UploadService.upload(file, jobId);
 
-        // todo: kafka message creation, validation and s3Upload rollback if not success
-        boolean kafkaMessageUploaded = true;
+        final boolean kafkaMessageUploaded = kafkaProducerService.sendMessage(
+            jobId, new JobQueueMessage(
+                request.getFormat(),
+                request.getSpeed(),
+                request.getPitchSemitones(),
+                request.getPreservePitch()
+            )
+        );
 
         if (!kafkaMessageUploaded) {
             s3UploadService.rollback(jobId);
