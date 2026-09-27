@@ -24,6 +24,10 @@ public class KafkaProducerService {
         } catch (TimeoutException e) {
             log.error("timeout on sending message with key {} and message {}", key, message, e);
             return false;
+        } catch (InterruptedException e) {
+            log.error("thread interrupted when receiving result with key {} and message {}", key, message, e);
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Exception e) {
             log.error("caught exception on sending message with key {} and message {}", key, message, e);
             return false;
