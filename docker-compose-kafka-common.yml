@@ -5,7 +5,8 @@ services:
    - KAFKA_TOPIC_PARTITIONS=3
    - KAFKA_REPLICATION_FACTOR=3
   entrypoint: ["/bin/sh", "-c"]
-  command: >
+  command:
+   - >
     kafka-topics.sh --bootstrap-server kafka-0:9092 --create --if-not-exists
     --topic queue --partitions $$KAFKA_TOPIC_PARTITIONS --replication-factor $$KAFKA_REPLICATION_FACTOR
     &&

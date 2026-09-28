@@ -7,7 +7,8 @@ services:
    - MINIO_PRESIGNED_USER=silo-presigned
    - MINIO_PRESIGNED_PASSWORD=abcdefghijklmnop
   entrypoint: ["/bin/sh", "-c"]
-  command: |
+  command:
+   - |
     mc alias set silo http://silo:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
     mc mb --ignore-existing silo/client-sources &&
     mc mb --ignore-existing silo/job-results &&
@@ -24,10 +25,12 @@ services:
       }
     ]
     }
-    EOF &&
+    EOF
     mc admin user add silo $$MINIO_PRESIGNED_USER $$MINIO_PRESIGNED_PASSWORD &&
     mc admin policy create silo job-results-read /tmp/policy.json &&
     mc admin policy attach silo job-results-read --user $$MINIO_PRESIGNED_USER
+  networks:
+   - s3
   depends_on:
    silo:
     condition: service_healthy
