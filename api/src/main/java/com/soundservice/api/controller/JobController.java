@@ -4,7 +4,9 @@ import com.fasterxml.uuid.Generators;
 import com.soundservice.api.annotations.RateLimit;
 import com.soundservice.api.dto.*;
 import com.soundservice.api.exception.JobCreationException;
+import com.soundservice.api.exception.JobStateException;
 import com.soundservice.api.service.KafkaProducerService;
+import com.soundservice.api.service.RedisService;
 import com.soundservice.api.service.S3PresignedService;
 import com.soundservice.api.service.S3UploadService;
 import com.soundservice.api.utils.PresetSettingsStorage;
@@ -13,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +31,7 @@ import java.util.UUID;
 @RequestMapping(JobController.PREFIX)
 @RequiredArgsConstructor
 @Validated
+@Log4j2
 public class JobController {
 
     public static final String PREFIX = "/v1/job";
@@ -35,6 +39,7 @@ public class JobController {
     private final S3UploadService s3UploadService;
     private final S3PresignedService s3PresignedService;
     private final KafkaProducerService kafkaProducerService;
+    private final RedisService redisService;
 
     @GetMapping(value = "/presets", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<PresetSettings>> presets() {
@@ -68,13 +73,25 @@ public class JobController {
             throw new JobCreationException("failed to enqueue job");
         }
 
+        try {
+            redisService.saveInQueueJobState(jobId);
+        } catch (Exception e) {
+            log.error("caught exception on saving job status", e);
+        }
+
         return ResponseEntity.ok(new JobResponse(jobId));
     }
 
     @GetMapping(value = "/{job_id}", produces = MediaType.APPLICATION_JSON_VALUE)
     @RateLimit(requestsPerMinute = 60, requestsPerSecond = 5)
     public ResponseEntity<JobStateResponse> forceCheck(@PathVariable("job_id") UUID jobId) {
-        return ResponseEntity.ok(new JobStateResponse(jobId, JobStatus.IN_QUEUE, System.currentTimeMillis()));
+        final JobStateItem state = redisService.getJobState(jobId);
+
+        if (state == null) {
+            throw new JobStateException(HttpStatus.NOT_FOUND, "job not found");
+        }
+
+        return ResponseEntity.ok(new JobStateResponse(jobId, state.status(), state.expireAt()));
     }
 
     @GetMapping(value = "/{job_id}/download")
