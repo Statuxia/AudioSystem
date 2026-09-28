@@ -15,7 +15,7 @@ import lombok.*;
 @EqualsAndHashCode
 public class AudioSettingsRequest {
     @NotEmpty
-    @Pattern(regexp = "mp3|wav|m4a")
+    @Pattern(regexp = "mp3|wav|ogg|opus|m4a|aac|flac|webm|mid|midi|aiff|aif|amr")
     private String format = "mp3";
     @DecimalMin("0.1")
     @DecimalMax("3")
