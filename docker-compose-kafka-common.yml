@@ -7,10 +7,10 @@ services:
   entrypoint: ["/bin/sh", "-c"]
   command: >
     kafka-topics.sh --bootstrap-server kafka-0:9092 --create --if-not-exists
-    --topic queue --partitions $KAFKA_TOPIC_PARTITIONS --replication-factor $KAFKA_REPLICATION_FACTOR
+    --topic queue --partitions $$KAFKA_TOPIC_PARTITIONS --replication-factor $$KAFKA_REPLICATION_FACTOR
     &&
     kafka-topics.sh  --bootstrap-server kafka-0:9092 --create --if-not-exists
-    --topic result --partitions $KAFKA_TOPIC_PARTITIONS --replication-factor $KAFKA_REPLICATION_FACTOR
+    --topic result --partitions $$KAFKA_TOPIC_PARTITIONS --replication-factor $$KAFKA_REPLICATION_FACTOR
   restart: "no"
   depends_on:
    kafka-0:

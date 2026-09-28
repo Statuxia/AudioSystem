@@ -8,9 +8,11 @@ services:
    - MINIO_PRESIGNED_PASSWORD=abcdefghijklmnop
   entrypoint: ["/bin/sh", "-c"]
   command: |
-    mc alias set silo http://silo:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD &&
+    mc alias set silo http://silo:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD &&
     mc mb --ignore-existing silo/client-sources &&
     mc mb --ignore-existing silo/job-results &&
+    mc ilm add --expiry-days 1 silo/client-sources &&
+    mc ilm add --expiry-days 1 silo/job-results &&
     cat > /tmp/policy.json <<'EOF'
     {
     "Version": "2012-10-17",
@@ -23,9 +25,9 @@ services:
     ]
     }
     EOF &&
-    mc admin user add silo $MINIO_PRESIGNED_USER $MINIO_PRESIGNED_PASSWORD &&
+    mc admin user add silo $$MINIO_PRESIGNED_USER $$MINIO_PRESIGNED_PASSWORD &&
     mc admin policy create silo job-results-read /tmp/policy.json &&
-    mc admin policy attach silo job-results-read --user $MINIO_PRESIGNED_USER
+    mc admin policy attach silo job-results-read --user $$MINIO_PRESIGNED_USER
   depends_on:
    silo:
     condition: service_healthy
