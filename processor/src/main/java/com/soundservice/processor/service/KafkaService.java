@@ -1,0 +1,48 @@
+package com.soundservice.processor.service;
+
+import com.soundservice.processor.dto.JobResultMessage;
+import com.soundservice.processor.dto.JobStatus;
+import com.soundservice.processor.exception.KafkaSendMessageException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+@Service
+@RequiredArgsConstructor
+public class KafkaService {
+
+    private final KafkaTemplate<String, JobResultMessage> kafkaTemplate;
+
+    public void sendDoneMessage(UUID key) {
+        sendMessage(
+            key,
+            new JobResultMessage(JobStatus.DONE, Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli())
+        );
+    }
+
+    public void sendErrorMessage(UUID key) {
+        sendMessage(
+            key,
+            new JobResultMessage(JobStatus.ERROR, Instant.now().toEpochMilli())
+        );
+    }
+
+    private void sendMessage(UUID key, JobResultMessage message) {
+        try {
+            kafkaTemplate.send("result", key.toString(), message).get(10, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            throw new KafkaSendMessageException("operation processes too long", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new KafkaSendMessageException("thread interrupted", e);
+        } catch (Exception e) {
+            throw new KafkaSendMessageException("caught exception on sending message", e);
+        }
+    }
+}
