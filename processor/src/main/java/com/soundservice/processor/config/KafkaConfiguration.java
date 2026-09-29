@@ -26,6 +26,8 @@ public class KafkaConfiguration {
     private String bootstrapServers;
     @Value("${spring.kafka.consumer.group-id}")
     private String groupId;
+    @Value("${spring.kafka.concurrency:1}")
+    private Integer concurrency;
 
     @Bean
     public ProducerFactory<String, JobResultMessage> kafkaProducer() {
@@ -59,6 +61,7 @@ public class KafkaConfiguration {
         final ConcurrentKafkaListenerContainerFactory<String, JobQueueMessage> factory
             = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
+        factory.setConcurrency(concurrency);
 
         return factory;
     }
