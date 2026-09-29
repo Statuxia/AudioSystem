@@ -9,6 +9,12 @@ services:
    - REDIS_PORT=6379
   networks:
    - redis
+ processor:
+  environment:
+   - REDIS_HOST=redis
+   - REDIS_PORT=6379
+  networks:
+   - redis
 networks:
  redis:
   driver: bridge

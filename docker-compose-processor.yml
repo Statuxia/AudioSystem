@@ -1,0 +1,3 @@
+services:
+ processor:
+  build: ./processor

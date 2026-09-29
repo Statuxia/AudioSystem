@@ -62,6 +62,15 @@ services:
    - MINIO_PRESIGNED_PASSWORD=abcdefghijklmnop
   networks:
    - s3
+ processor:
+  environment:
+   - MINIO_SERVER=silo:9000
+   - MINIO_ROOT_USER=silo-s3
+   - MINIO_ROOT_PASSWORD=abcdefghijklmnopqrstuvwxyz
+   - MINIO_CLIENT_BUCKET_NAME=client-sources
+   - MINIO_RESULT_BUCKET_NAME=job-results
+  networks:
+   - s3
 volumes:
  silo_data:
 networks:
