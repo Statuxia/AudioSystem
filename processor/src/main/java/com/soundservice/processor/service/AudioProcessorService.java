@@ -80,6 +80,14 @@ public class AudioProcessorService {
         command.add("-y");
         command.add("-i");
         command.add(srcPath.toString());
+        command.add("-map");
+        command.add("0:a");
+        if (FormatUtils.supportsCoverArt(settings.getFormat())) {
+            command.add("-map");
+            command.add("0:v?");
+            command.add("-c:v");
+            command.add("copy");
+        }
         command.add("-af");
         command.add("rubberband=tempo=%s:pitch=%s".formatted(settings.getSpeed(), pitchFactor));
         command.add("-f");

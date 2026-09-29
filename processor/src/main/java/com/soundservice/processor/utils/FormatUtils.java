@@ -4,12 +4,14 @@ import lombok.extern.log4j.Log4j2;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Log4j2
 public class FormatUtils {
 
     private static final Map<String, String> FORMAT_CONTENT_TYPE_MAP = new HashMap<>();
     private static final Map<String, String> FORMAT_MUXER_MAP = new HashMap<>();
+    private static final Set<String> COVER_ART_SUPPORTED_FORMATS = Set.of("mp3", "m4a", "flac");
     private static final String DEFAULT_CONTENT_TYPE = "audio/mpeg";
     private static final String DEFAULT_MUXER = "mp3";
 
@@ -56,5 +58,9 @@ public class FormatUtils {
             return DEFAULT_MUXER;
         }
         return muxer;
+    }
+
+    public static boolean supportsCoverArt(String format) {
+        return COVER_ART_SUPPORTED_FORMATS.contains(format);
     }
 }
