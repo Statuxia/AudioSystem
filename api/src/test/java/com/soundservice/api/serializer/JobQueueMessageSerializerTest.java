@@ -21,8 +21,7 @@ class JobQueueMessageSerializerTest {
         final JobQueueMessage message = new JobQueueMessage(
             "format",
             1.0F,
-            1.0F,
-            false
+            1.0F
         );
 
         final byte[] serialized = serializer.serialize("any", message);
@@ -35,7 +34,6 @@ class JobQueueMessageSerializerTest {
         assertEquals("format", mappedObject.get("format").asString());
         assertEquals(1.0F, mappedObject.get("speed").asFloat(), 0.001);
         assertEquals(1.0F, mappedObject.get("pitchSemitones").asFloat(), 0.001);
-        assertFalse(mappedObject.get("preservePitch").asBoolean());
     }
 
 }

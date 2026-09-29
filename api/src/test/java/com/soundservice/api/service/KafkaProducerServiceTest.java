@@ -28,8 +28,7 @@ class KafkaProducerServiceTest {
     private static final JobQueueMessage DEFAULT_MESSAGE = new JobQueueMessage(
         "format",
         1.0F,
-        1.0F,
-        false
+        1.0F
     );
 
     @InjectMocks
