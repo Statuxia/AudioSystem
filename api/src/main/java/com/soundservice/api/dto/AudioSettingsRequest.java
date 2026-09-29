@@ -2,7 +2,10 @@ package com.soundservice.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -23,6 +26,4 @@ public class AudioSettingsRequest {
     @DecimalMin("-10")
     @DecimalMax("10")
     private Float pitchSemitones = 0F;
-    @NotNull
-    private Boolean preservePitch = false;
 }

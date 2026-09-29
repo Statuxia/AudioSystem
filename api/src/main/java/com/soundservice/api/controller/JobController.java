@@ -63,8 +63,7 @@ public class JobController {
             jobId, new JobQueueMessage(
                 request.getFormat(),
                 request.getSpeed(),
-                request.getPitchSemitones(),
-                request.getPreservePitch()
+                request.getPitchSemitones()
             )
         );
 
