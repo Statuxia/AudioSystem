@@ -1,3 +1,8 @@
 services:
  processor:
   build: ./processor
+  deploy:
+   resources:
+    limits:
+     cpus: "1.5"
+     memory: 1G
