@@ -38,12 +38,10 @@ public class S3Service {
                 builder -> builder
                     .key(key.toString())
                     .bucket(s3ConfigurationProperties.getBucket().get("result").getName())
-                    .contentType(dto.getContentType())
-                    .contentDisposition(dto.getContentDisposition())
+                    .contentType(dto.contentType())
+                    .contentDisposition(dto.contentDisposition())
                     .build(),
-                dto.getBytes() != null
-                    ? RequestBody.fromBytes(dto.getBytes())
-                    : RequestBody.fromInputStream(dto.getInputStream(), dto.getContentLength())
+                RequestBody.fromInputStream(dto.inputStream(), dto.contentLength())
             );
         } catch (SdkException e) {
             throw new SourceUploadException("failed to upload object", e);

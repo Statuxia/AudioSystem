@@ -6,10 +6,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Log4j2
-public class ContentTypeUtils {
+public class FormatUtils {
 
     private static final Map<String, String> FORMAT_CONTENT_TYPE_MAP = new HashMap<>();
+    private static final Map<String, String> FORMAT_MUXER_MAP = new HashMap<>();
     private static final String DEFAULT_CONTENT_TYPE = "audio/mpeg";
+    private static final String DEFAULT_MUXER = "mp3";
 
     static {
         FORMAT_CONTENT_TYPE_MAP.put("mp3", DEFAULT_CONTENT_TYPE);
@@ -20,14 +22,22 @@ public class ContentTypeUtils {
         FORMAT_CONTENT_TYPE_MAP.put("aac", "audio/aac");
         FORMAT_CONTENT_TYPE_MAP.put("flac", "audio/flac");
         FORMAT_CONTENT_TYPE_MAP.put("webm", "audio/webm");
-        FORMAT_CONTENT_TYPE_MAP.put("mid", "audio/midi");
-        FORMAT_CONTENT_TYPE_MAP.put("midi", "audio/midi");
         FORMAT_CONTENT_TYPE_MAP.put("aiff", "audio/aiff");
         FORMAT_CONTENT_TYPE_MAP.put("aif", "audio/aiff");
-        FORMAT_CONTENT_TYPE_MAP.put("amr", "audio/amr");
+
+        FORMAT_MUXER_MAP.put("mp3", "mp3");
+        FORMAT_MUXER_MAP.put("wav", "wav");
+        FORMAT_MUXER_MAP.put("ogg", "ogg");
+        FORMAT_MUXER_MAP.put("opus", "opus");
+        FORMAT_MUXER_MAP.put("m4a", "ipod");
+        FORMAT_MUXER_MAP.put("aac", "adts");
+        FORMAT_MUXER_MAP.put("flac", "flac");
+        FORMAT_MUXER_MAP.put("webm", "webm");
+        FORMAT_MUXER_MAP.put("aiff", "aiff");
+        FORMAT_MUXER_MAP.put("aif", "aiff");
     }
 
-    private ContentTypeUtils() {
+    private FormatUtils() {
     }
 
     public static String getContentType(String format) {
@@ -37,5 +47,14 @@ public class ContentTypeUtils {
             return DEFAULT_CONTENT_TYPE;
         }
         return contentType;
+    }
+
+    public static String getMuxer(String format) {
+        final String muxer = FORMAT_MUXER_MAP.get(format);
+        if (muxer == null) {
+            log.warn("unknown format: {}", format);
+            return DEFAULT_MUXER;
+        }
+        return muxer;
     }
 }

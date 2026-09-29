@@ -1,15 +1,20 @@
 package com.soundservice.processor.service;
 
 import com.soundservice.processor.dto.JobQueueMessage;
+import com.soundservice.processor.dto.JobSettings;
 import com.soundservice.processor.dto.UploadFileDTO;
+import com.soundservice.processor.exception.JobResultFileException;
 import com.soundservice.processor.utils.ContentDispositionUtils;
-import com.soundservice.processor.utils.ContentTypeUtils;
+import com.soundservice.processor.utils.FormatUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
@@ -21,6 +26,7 @@ public class ProcessorService {
     private final S3Service s3Service;
     private final RedisService redisService;
     private final KafkaService kafkaService;
+    private final AudioProcessorService audioProcessorService;
 
     public void process(UUID key, JobQueueMessage settings) {
         try {
@@ -28,7 +34,7 @@ public class ProcessorService {
             final ResponseInputStream<GetObjectResponse> sourceFile = s3Service.get(key);
 
             log.debug("[{}] processing file with settings {}", key, settings);
-            final UploadFileDTO dto = processFile(sourceFile, settings);
+            final UploadFileDTO dto = processFile(key, sourceFile, settings);
 
             uploadAndNotify(key, dto);
         } catch (Exception e) {
@@ -39,27 +45,44 @@ public class ProcessorService {
             sendErrorMessage(key);
         }
 
+        deleteResultFile(key, settings.format());
+        deleteSourceFile(key);
         deleteSource(key);
     }
 
-    private UploadFileDTO processFile(ResponseInputStream<GetObjectResponse> sourceFile, JobQueueMessage settings) {
+    private UploadFileDTO processFile(
+        UUID key,
+        ResponseInputStream<GetObjectResponse> sourceFile,
+        JobQueueMessage jobMessage
+    ) {
         final Map<String, String> metadata = sourceFile.response().metadata();
-        final String contentType = ContentTypeUtils.getContentType(settings.format());
+        final String contentType = FormatUtils.getContentType(jobMessage.format());
         final String contentDisposition = ContentDispositionUtils.getContentDisposition(
             metadata.get("original-filename"),
-            settings.format(),
+            jobMessage.format(),
             "audio"
         );
 
-        // todo: process
+        final JobSettings jobSettings = new JobSettings.Builder()
+            .jobId(key.toString())
+            .format(jobMessage.format())
+            .contentType(contentType)
+            .inputStream(sourceFile)
+            .speed(jobMessage.speed())
+            .pitchSemitones(jobMessage.pitchSemitones())
+            .build();
+        final Path resultFilePath = audioProcessorService.process(jobSettings);
 
-        return new UploadFileDTO(
-            contentType,
-            contentDisposition,
-            null,
-            null,
-            null
-        );
+        try {
+            return new UploadFileDTO(
+                contentType,
+                contentDisposition,
+                Files.newInputStream(resultFilePath),
+                Files.size(resultFilePath)
+            );
+        } catch (IOException e) {
+            throw new JobResultFileException("failed to process result file", e);
+        }
     }
 
     /**
@@ -108,5 +131,13 @@ public class ProcessorService {
         } catch (Exception e) {
             log.error("[{}] caught exception on sending message to kafka", key, e);
         }
+    }
+
+    private void deleteResultFile(UUID key, String format) {
+        FileUtils.delete(key, format);
+    }
+
+    private void deleteSourceFile(UUID key) {
+        FileUtils.deleteSrc(key);
     }
 }

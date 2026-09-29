@@ -5,5 +5,5 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record JobQueueMessage(String format, Float speed, Float pitchSemitones, Boolean preservePitch) {
+public record JobQueueMessage(String format, Float speed, Float pitchSemitones) {
 }
