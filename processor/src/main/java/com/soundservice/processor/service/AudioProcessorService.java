@@ -2,6 +2,7 @@ package com.soundservice.processor.service;
 
 import com.soundservice.processor.dto.JobSettings;
 import com.soundservice.processor.exception.AudioProcessorException;
+import com.soundservice.processor.utils.FileUtils;
 import com.soundservice.processor.utils.FormatUtils;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;

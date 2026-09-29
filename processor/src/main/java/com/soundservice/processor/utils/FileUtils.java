@@ -1,4 +1,4 @@
-package com.soundservice.processor.service;
+package com.soundservice.processor.utils;
 
 import lombok.extern.log4j.Log4j2;
 
