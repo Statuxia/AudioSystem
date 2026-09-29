@@ -73,7 +73,7 @@ public class AudioProcessorService {
         return resultPath;
     }
 
-    private List<String> buildCommand(JobSettings settings, Path srcPath, Path resultPath) {
+    List<String> buildCommand(JobSettings settings, Path srcPath, Path resultPath) {
         final double pitchFactor = Math.pow(2, settings.getPitchSemitones() / 12.0);
         final List<String> command = new ArrayList<>();
 
