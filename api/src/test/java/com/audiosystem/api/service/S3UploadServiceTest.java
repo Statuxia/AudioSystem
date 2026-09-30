@@ -17,6 +17,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -98,7 +100,7 @@ class S3UploadServiceTest {
         assertEquals("client-bucket", actual.bucket());
         assertEquals(key.toString(), actual.key());
         assertEquals("audio/mpeg", actual.contentType());
-        assertEquals("test2", actual.metadata().get("original-filename"));
+        assertEquals("test2", URLDecoder.decode(actual.metadata().get("original-filename"), StandardCharsets.UTF_8));
 
     }
 

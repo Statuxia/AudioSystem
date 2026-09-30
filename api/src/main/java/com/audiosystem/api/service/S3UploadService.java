@@ -12,6 +12,8 @@ import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.UUID;
 
@@ -39,7 +41,7 @@ public class S3UploadService {
                 builder -> builder
                     .bucket(s3ConfigurationProperties.getBucket().get("client").getName())
                     .key(key.toString())
-                    .metadata(Map.of("original-filename", name))
+                    .metadata(Map.of("original-filename", URLEncoder.encode(name, StandardCharsets.UTF_8)))
                     .contentType(contentType),
                 RequestBody.fromInputStream(inputStream.unwrap(), multipartFile.getSize())
             );
