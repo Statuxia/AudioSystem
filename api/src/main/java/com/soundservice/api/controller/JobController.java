@@ -32,6 +32,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Validated
 @Log4j2
+@CrossOrigin("*")
 public class JobController {
 
     public static final String PREFIX = "/v1/job";
