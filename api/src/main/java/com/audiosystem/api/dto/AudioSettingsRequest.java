@@ -23,7 +23,7 @@ public class AudioSettingsRequest {
     @DecimalMin("0.1")
     @DecimalMax("3")
     private Float speed = 1F;
-    @DecimalMin("-10")
-    @DecimalMax("10")
+    @DecimalMin("-12")
+    @DecimalMax("12")
     private Float pitchSemitones = 0F;
 }
