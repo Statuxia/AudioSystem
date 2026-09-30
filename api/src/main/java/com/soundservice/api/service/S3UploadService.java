@@ -30,8 +30,8 @@ public class S3UploadService {
         final String name = audioFileService.getFileName(multipartFile, key.toString());
 
         if (!audioFileService.isValidAudioType(contentType)) {
-            log.debug("[{}] invalid file type", key);
-            throw new ValidationException("invalid file type");
+            log.debug("[{}] invalid file type: {}", key, contentType);
+            throw new ValidationException("invalid file type: " + contentType);
         }
 
         try {

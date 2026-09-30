@@ -32,7 +32,8 @@ public class AudioFileService {
         "audio/x-midi",
         "audio/aiff",
         "audio/x-aiff",
-        "audio/amr"
+        "audio/amr",
+        "video/quicktime"
     );
 
     public TikaInputStream getInputStream(@NotNull MultipartFile file) {
