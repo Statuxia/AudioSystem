@@ -26,9 +26,9 @@ public class SwaggerConfiguration {
             }
 
             final String description = operation.getDescription();
-            final StringBuilder builder = new StringBuilder(description);
+            final StringBuilder builder = new StringBuilder();
             if (StringUtils.hasText(description)) {
-                builder.append("\n<h2>Limits\n");
+                builder.append(description).append("\n<h2>Limits\n");
             } else {
                 builder.append("<h2>Limits\n");
             }
