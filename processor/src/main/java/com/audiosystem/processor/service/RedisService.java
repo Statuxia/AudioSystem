@@ -24,7 +24,7 @@ public class RedisService {
     private final RedisService instance;
 
     public boolean isInQueue(UUID key) {
-        final JobStateItem item = redisTemplate.opsForValue().get(key);
+        final JobStateItem item = redisTemplate.opsForValue().get(key.toString());
         return item == null || item.status() == JobStatus.IN_QUEUE;
     }
 

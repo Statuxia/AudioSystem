@@ -36,7 +36,7 @@ public class ProcessorService {
                 return;
             }
         } catch (Exception e) {
-            log.error("[{}] caught exception on getting job status. Skip", key);
+            log.error("[{}] caught exception on getting job status. Skip", key, e);
             return;
         }
 
