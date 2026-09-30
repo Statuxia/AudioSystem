@@ -31,6 +31,16 @@ public class ProcessorService {
 
     public void process(UUID key, JobQueueMessage settings) {
         try {
+            if (!redisService.isInQueue(key)) {
+                log.debug("[{}] job already processed. Skip", key);
+                return;
+            }
+        } catch (Exception e) {
+            log.error("[{}] caught exception on getting job status. Skip", key);
+            return;
+        }
+
+        try {
             log.debug("[{}] getting client source file", key);
             final ResponseInputStream<GetObjectResponse> sourceFile = s3Service.get(key);
 

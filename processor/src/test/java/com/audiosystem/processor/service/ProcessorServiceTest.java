@@ -52,6 +52,13 @@ class ProcessorServiceTest {
     private Path resultPath;
     private Path srcPath;
 
+//    @BeforeEach
+//    void mockRedisStatus() {
+//        final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
+//        BDDMockito.doReturn(mock).when(redisService).isInQueue(any(UUID.class));
+//        BDDMockito.doReturn(null).when(mock).get(any());
+//    }
+
     @AfterEach
     void cleanup() throws IOException {
         if (resultPath != null) {
@@ -87,6 +94,7 @@ class ProcessorServiceTest {
 
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -107,6 +115,7 @@ class ProcessorServiceTest {
     void testProcessFailsOnS3Get() {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willThrow(RuntimeException.class);
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -125,6 +134,7 @@ class ProcessorServiceTest {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willThrow(RuntimeException.class);
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -145,6 +155,7 @@ class ProcessorServiceTest {
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
         BDDMockito.willThrow(RuntimeException.class).given(s3Service).upload(any(), any());
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -163,10 +174,24 @@ class ProcessorServiceTest {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willThrow(RuntimeException.class);
         BDDMockito.willThrow(RuntimeException.class).given(s3Service).rollbackResult(key);
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
         verify(redisService).setError(key);
         verify(kafkaService).sendErrorMessage(key);
+    }
+
+    @Test
+    void testNotInQueue() {
+        key = UUID.randomUUID();
+
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(false);
+
+        assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
+
+        verify(s3Service, never()).upload(any(), any());
+        verify(redisService, never()).setError(key);
+        verify(kafkaService, never()).sendErrorMessage(key);
     }
 }

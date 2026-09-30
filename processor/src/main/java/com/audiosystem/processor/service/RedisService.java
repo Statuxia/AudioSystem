@@ -23,6 +23,11 @@ public class RedisService {
     @Lazy
     private final RedisService instance;
 
+    public boolean isInQueue(UUID key) {
+        final JobStateItem item = redisTemplate.opsForValue().get(key);
+        return item == null || item.status() == JobStatus.IN_QUEUE;
+    }
+
     public void setDone(UUID key) {
         instance.setStatus(key, JobStatus.DONE, Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli());
     }

@@ -5,6 +5,8 @@ import com.audiosystem.processor.dto.JobStatus;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.QueryTimeoutException;
@@ -34,6 +36,40 @@ class RedisServiceTest {
 
     @Captor
     private ArgumentCaptor<Long> expireAtCaptor;
+
+    @Test
+    void testIsInQueueNoState() {
+        final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
+        final UUID key = UUID.randomUUID();
+
+        BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
+        BDDMockito.doReturn(null).when(mock).get(key);
+
+        assertTrue(redisService.isInQueue(key));
+    }
+
+    @Test
+    void testIsInQueueInQueueState() {
+        final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
+        final UUID key = UUID.randomUUID();
+
+        BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
+        BDDMockito.doReturn(new JobStateItem(key, JobStatus.IN_QUEUE, 0L)).when(mock).get(key);
+
+        assertTrue(redisService.isInQueue(key));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"DONE", "ERROR"})
+    void testIsInQueueNotInQueueState(String status) {
+        final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
+        final UUID key = UUID.randomUUID();
+
+        BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
+        BDDMockito.doReturn(new JobStateItem(key, JobStatus.valueOf(status), 0L)).when(mock).get(key);
+
+        assertFalse(redisService.isInQueue(key));
+    }
 
     @Test
     void testSetDoneDelegatesWithOneDayExpiry() {
