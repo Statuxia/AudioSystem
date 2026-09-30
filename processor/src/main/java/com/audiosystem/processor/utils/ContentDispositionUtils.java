@@ -2,6 +2,7 @@ package com.audiosystem.processor.utils;
 
 import org.springframework.util.StringUtils;
 
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
@@ -26,6 +27,7 @@ public class ContentDispositionUtils {
     }
 
     private static String processFilename(String raw, String format) {
+        raw = URLDecoder.decode(raw, StandardCharsets.UTF_8);
         return CONTROL_CHARS.matcher(raw).replaceAll("") + "." + format;
     }
 

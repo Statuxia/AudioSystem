@@ -3,6 +3,7 @@ package com.audiosystem.processor.utils;
 import org.junit.jupiter.api.Test;
 
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,7 +39,7 @@ class ContentDispositionUtilsTest {
 
     @Test
     void testNonAsciiFilenameEncoded() {
-        final String result = ContentDispositionUtils.getContentDisposition("файл", "mp3", "default");
+        final String result = ContentDispositionUtils.getContentDisposition(URLEncoder.encode("файл", StandardCharsets.UTF_8), "mp3", "default");
 
         assertTrue(result.startsWith("attachment; filename=\"____.mp3\"; filename*=UTF-8''"));
 
