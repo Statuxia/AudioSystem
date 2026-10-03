@@ -1,10 +1,16 @@
-name: Java CI with Gradle
+name: processor CI
 
 on:
   push:
     branches: [ "master", "develop" ]
+    paths:
+      - "processor/**"
+      - ".github/workflows/processor.yml"
   pull_request:
     branches: [ "**" ]
+    paths:
+      - "processor/**"
+      - ".github/workflows/processor.yml"
 
 jobs:
   build:
@@ -13,6 +19,8 @@ jobs:
       contents: read
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
@@ -23,7 +31,9 @@ jobs:
         uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
 
       - name: Permission fix
+        working-directory: processor
         run: chmod +x gradlew
 
       - name: Build with Gradle Wrapper
+        working-directory: processor
         run: ./gradlew test
