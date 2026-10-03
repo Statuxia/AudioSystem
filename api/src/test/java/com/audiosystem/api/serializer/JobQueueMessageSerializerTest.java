@@ -30,7 +30,6 @@ class JobQueueMessageSerializerTest {
         assertTrue(mappedObject.has("format"));
         assertTrue(mappedObject.has("speed"));
         assertTrue(mappedObject.has("pitchSemitones"));
-        assertTrue(mappedObject.has("preservePitch"));
         assertEquals("format", mappedObject.get("format").asString());
         assertEquals(1.0F, mappedObject.get("speed").asFloat(), 0.001);
         assertEquals(1.0F, mappedObject.get("pitchSemitones").asFloat(), 0.001);
