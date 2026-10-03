@@ -20,6 +20,10 @@ services:
       test: ["CMD", "wget", "--spider", "-q", "localhost:8080/api/health"]
       interval: 30s
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+         memory: 1G
   ws-gateway:
     build: ./ws-gateway
     networks:
