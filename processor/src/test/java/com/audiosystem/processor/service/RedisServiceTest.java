@@ -43,7 +43,7 @@ class RedisServiceTest {
         final UUID key = UUID.randomUUID();
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
-        BDDMockito.doReturn(null).when(mock).get(key);
+        BDDMockito.doReturn(null).when(mock).get(key.toString());
 
         assertTrue(redisService.isInQueue(key));
     }
@@ -54,7 +54,7 @@ class RedisServiceTest {
         final UUID key = UUID.randomUUID();
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
-        BDDMockito.doReturn(new JobStateItem(key, JobStatus.IN_QUEUE, 0L)).when(mock).get(key);
+        BDDMockito.doReturn(new JobStateItem(key, JobStatus.IN_QUEUE, 0L)).when(mock).get(key.toString());
 
         assertTrue(redisService.isInQueue(key));
     }
@@ -66,7 +66,7 @@ class RedisServiceTest {
         final UUID key = UUID.randomUUID();
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
-        BDDMockito.doReturn(new JobStateItem(key, JobStatus.valueOf(status), 0L)).when(mock).get(key);
+        BDDMockito.doReturn(new JobStateItem(key, JobStatus.valueOf(status), 0L)).when(mock).get(key.toString());
 
         assertFalse(redisService.isInQueue(key));
     }
