@@ -35,6 +35,10 @@ public class SubscriptionMessageInterceptor implements ChannelInterceptor {
             return message;
         }
 
+        if (accessor.getDestination() == null) {
+            return message;
+        }
+
         if (!accessor.getDestination().startsWith("/topic/job/")) {
             return message;
         }
