@@ -73,7 +73,7 @@ class KafkaConsumerServiceTest {
         for (int i = 0; i < queueLength; i++) {
             kafkaConsumerService.consumeQueue(
                 new UUID(0L, i).toString(),
-                new JobQueueMessage("mp3", 1F, 0F, false)
+                new JobQueueMessage("mp3", 1F, 0F)
             );
         }
     }

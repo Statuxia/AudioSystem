@@ -23,7 +23,7 @@ class QueueMessageDeserializerTest {
 
     @Test
     void testDeserializeMessage() {
-        final JobQueueMessage message = new JobQueueMessage("mp3", 1F, 0F, false);
+        final JobQueueMessage message = new JobQueueMessage("mp3", 1F, 0F);
         final byte[] bytes = mapper.writeValueAsBytes(message);
 
         assertEquals(message, deserializer.deserialize("any", bytes));
