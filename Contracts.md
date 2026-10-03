@@ -19,6 +19,7 @@ Response[200]: `JobResponse`
 Response[400]: `ApiResponse` // bad data in fields
 Response[413]: `ApiResponse` // file too large. limit 64mb
 Response[429]: `ApiResponse` // too many requests. limit 3 per minute
+Response[503]: `ApiResponse` // when redis service unavailable for remote rate limiting
 
 ### Force-check состояния обработки
 Limits:
@@ -27,6 +28,7 @@ GET `/api/v1/job/{job_id}`
 PathVariable: `job_id: string;` // UUIDv7
 Response[200]: `JobStateResponse`
 Response[404]: `ApiResponse` // not found
+Response[503]: `ApiResponse` // when redis service unavailable for remote rate limiting
 
 ### Скачивание файла
 Limits:
@@ -36,6 +38,7 @@ PathVariable: `job_id: string;` // UUIDv7
 Response[302]: redirect to silo presigned url
 Response[404]: Silo-format response
 Response[429]: `ApiResponse` // too many requests. limit 6 per minute
+Response[503]: `ApiResponse` // when redis service unavailable for remote rate limiting
 
 ## WebSockets:
 
