@@ -231,13 +231,17 @@ class SubscriptionRegistryServiceTest {
     void testUnsubscribeUnknown() {
         final UUID jobId = new UUID(0, 0);
 
+        service.subscribe("sess2", "sub", jobId);
+
         OptionalInt subscriptionCount = service.getSubscriptionCount(jobId);
-        assertTrue(subscriptionCount.isEmpty());
+        assertTrue(subscriptionCount.isPresent());
+        assertEquals(1, subscriptionCount.getAsInt());
 
         service.unsubscribe("sess", "sub");
 
         subscriptionCount = service.getSubscriptionCount(jobId);
-        assertTrue(subscriptionCount.isEmpty());
+        assertTrue(subscriptionCount.isPresent());
+        assertEquals(1, subscriptionCount.getAsInt());
     }
 
     @ParameterizedTest
@@ -352,11 +356,13 @@ class SubscriptionRegistryServiceTest {
 
         OptionalInt subscriptionCount = service.getSubscriptionCount(jobId);
         assertTrue(subscriptionCount.isPresent());
+        assertEquals(1, subscriptionCount.getAsInt());
 
         service.disconnect("sess");
 
         subscriptionCount = service.getSubscriptionCount(jobId);
         assertTrue(subscriptionCount.isPresent());
+        assertEquals(1, subscriptionCount.getAsInt());
     }
 
     @Test
