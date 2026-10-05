@@ -6,10 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.Map;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
@@ -18,43 +15,43 @@ import java.util.function.BiFunction;
 @Log4j2
 public class SubscriptionRegistryService {
 
-    private final Map<String, Map<String, String>> sessionSubscriptionJobRegistry = new ConcurrentHashMap<>();
-    private final Map<String, SubscribedJobInfo> subscribedJobInfoRegistry = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, UUID>> sessionSubscriptionJobRegistry = new ConcurrentHashMap<>();
+    private final Map<UUID, SubscribedJobInfo> subscribedJobInfoRegistry = new ConcurrentHashMap<>();
 
-    public Set<String> getAllSubscribedJobs() {
+    public Set<UUID> getAllSubscribedJobs() {
         return Set.copyOf(subscribedJobInfoRegistry.keySet());
     }
 
-    public OptionalLong updateQueuePosition(String jobId, long position) {
-        if (!hasText(jobId, "jobId")) return OptionalLong.empty();
+    public OptionalLong updateQueuePosition(UUID jobId, long position) {
+        if (noJobId(jobId)) return OptionalLong.empty();
         final SubscribedJobInfo info = subscribedJobInfoRegistry.computeIfPresent(
-            jobId, (k, v) -> new SubscribedJobInfo(v.count(), Math.min(position, v.lastQueuePosition()))
+            jobId, (_, v) -> new SubscribedJobInfo(v.count(), Math.min(position, v.lastQueuePosition()))
         );
         return info == null ? OptionalLong.empty() : OptionalLong.of(info.lastQueuePosition());
     }
 
-    public OptionalLong getQueuePosition(String jobId) {
-        if (!hasText(jobId, "jobId")) return OptionalLong.empty();
+    public OptionalLong getQueuePosition(UUID jobId) {
+        if (noJobId(jobId)) return OptionalLong.empty();
         final SubscribedJobInfo info = subscribedJobInfoRegistry.get(jobId);
         return info == null || info.lastQueuePosition() == Long.MAX_VALUE
             ? OptionalLong.empty() : OptionalLong.of(info.lastQueuePosition());
     }
 
-    public void subscribe(String sessionId, String subscriptionId, String jobId) {
-        if (!hasText(sessionId, "sessionId")
-            || !hasText(subscriptionId, "subscriptionId")
-            || !hasText(jobId, "jobId")
+    public void subscribe(String sessionId, String subscriptionId, UUID jobId) {
+        if (noText(sessionId, "sessionId")
+            || noText(subscriptionId, "subscriptionId")
+            || noJobId(jobId)
         ) {
             return;
         }
 
         sessionSubscriptionJobRegistry.compute(
-            sessionId, (sess, map) -> {
+            sessionId, (_, map) -> {
                 map = map == null ? new ConcurrentHashMap<>() : map;
 
                 if (map.putIfAbsent(subscriptionId, jobId) == null) {
                     subscribedJobInfoRegistry.compute(
-                        jobId, (k, v) -> v == null
+                        jobId, (_, v) -> v == null
                             ? new SubscribedJobInfo(1, Long.MAX_VALUE)
                             : new SubscribedJobInfo(v.count() + 1, v.lastQueuePosition())
                     );
@@ -66,13 +63,13 @@ public class SubscriptionRegistryService {
     }
 
     public void unsubscribe(String sessionId, String subscriptionId) {
-        if (!hasText(sessionId, "sessionId") || !hasText(subscriptionId, "subscriptionId")) {
+        if (noText(sessionId, "sessionId") || noText(subscriptionId, "subscriptionId")) {
             return;
         }
 
         sessionSubscriptionJobRegistry.computeIfPresent(
-            sessionId, (sess, map) -> {
-                final String jobId = map.remove(subscriptionId);
+            sessionId, (_, map) -> {
+                final UUID jobId = map.remove(subscriptionId);
                 if (jobId != null) {
                     subscribedJobInfoRegistry.compute(jobId, decrementFunction());
                 }
@@ -82,14 +79,14 @@ public class SubscriptionRegistryService {
     }
 
     public void disconnect(String sessionId) {
-        if (!hasText(sessionId, "sessionId")) {
+        if (noText(sessionId, "sessionId")) {
             return;
         }
 
         sessionSubscriptionJobRegistry.compute(
-            sessionId, (sess, map) -> {
+            sessionId, (_, map) -> {
                 if (map != null) {
-                    map.forEach((sub, job) -> subscribedJobInfoRegistry.compute(job, decrementFunction()));
+                    map.forEach((_, job) -> subscribedJobInfoRegistry.compute(job, decrementFunction()));
                 }
                 return null;
             }
@@ -99,22 +96,30 @@ public class SubscriptionRegistryService {
     /**
      * for testing only
      */
-    OptionalInt getSubscriptionCount(String jobId) {
+    OptionalInt getSubscriptionCount(UUID jobId) {
         final SubscribedJobInfo info = subscribedJobInfoRegistry.get(jobId);
         return info == null ? OptionalInt.empty() : OptionalInt.of(info.count());
     }
 
-    private BiFunction<String, SubscribedJobInfo, SubscribedJobInfo> decrementFunction() {
-        return (k, v) -> v == null || v.count() == 1
+    private BiFunction<UUID, SubscribedJobInfo, SubscribedJobInfo> decrementFunction() {
+        return (_, v) -> v == null || v.count() == 1
             ? null
             : new SubscribedJobInfo(v.count() - 1, v.lastQueuePosition());
     }
 
-    private boolean hasText(String value, String fieldName) {
+    private boolean noText(String value, String fieldName) {
         if (StringUtils.hasText(value)) {
-            return true;
+            return false;
         }
         log.debug("{} is empty. Skip", fieldName);
+        return true;
+    }
+
+    private boolean noJobId(UUID jobId) {
+        if (jobId == null) {
+            log.debug("jobId is null. Skip");
+            return true;
+        }
         return false;
     }
 }
