@@ -2,6 +2,7 @@ package com.audiosystem.wsgateway.config;
 
 import com.audiosystem.wsgateway.config.interceptor.ExternalMessageInterceptor;
 import com.audiosystem.wsgateway.config.interceptor.SubscriptionMessageInterceptor;
+import com.audiosystem.wsgateway.config.interceptor.UnsubscriptionMessageInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -18,6 +19,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Lazy
     private final SubscriptionMessageInterceptor subscriptionMessageInterceptor;
+    private final UnsubscriptionMessageInterceptor unsubscriptionMessageInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -27,11 +29,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.setPreserveReceiveOrder(true);
         registry.addEndpoint("/ws").setAllowedOriginPatterns("*");
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new ExternalMessageInterceptor(), subscriptionMessageInterceptor);
+        registration.interceptors(
+            new ExternalMessageInterceptor(),
+            subscriptionMessageInterceptor,
+            unsubscriptionMessageInterceptor
+        );
     }
 }

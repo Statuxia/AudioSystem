@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -15,5 +16,9 @@ public class RedisService {
 
     public JobStateItem getState(UUID jobId) {
         return redisTemplate.opsForValue().get(jobId.toString());
+    }
+
+    public OptionalLong getJobIdRank(UUID jobId) {
+        return OptionalLong.empty(); // todo: next step
     }
 }
