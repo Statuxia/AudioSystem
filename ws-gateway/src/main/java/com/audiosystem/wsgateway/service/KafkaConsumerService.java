@@ -1,27 +1,24 @@
 package com.audiosystem.wsgateway.service;
 
 import com.audiosystem.wsgateway.dto.JobQueueMessage;
-import com.audiosystem.wsgateway.dto.JobQueueResponse;
 import com.audiosystem.wsgateway.dto.JobResultMessage;
-import com.audiosystem.wsgateway.dto.JobStateResponse;
+import com.audiosystem.wsgateway.utils.JobIdUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Log4j2
 public class KafkaConsumerService {
 
-    private final Map<String, Long> jobQueue = new ConcurrentHashMap<>();
-    private final AtomicLong queueIndex = new AtomicLong(1);
-    private final WebSocketMessageService webSocketMessageService;
+    private final RedisService redisService;
 
     @KafkaListener(
         topics = "queue",
@@ -32,8 +29,15 @@ public class KafkaConsumerService {
         @Header(KafkaHeaders.RECEIVED_KEY) String key,
         @Payload JobQueueMessage message
     ) {
-        final long queuePosition = queueIndex.getAndIncrement();
-        jobQueue.putIfAbsent(key, queuePosition);
+        log.debug("[{}] message: {}", key, message);
+
+        final UUID jobId = JobIdUtils.parseJobUuid(key);
+        if (jobId == null) {
+            log.warn("skipping wrong jobId format: {}", key);
+            return;
+        }
+
+        redisService.addJobToQueuePositions(jobId);
     }
 
     @KafkaListener(
@@ -45,27 +49,15 @@ public class KafkaConsumerService {
         @Header(KafkaHeaders.RECEIVED_KEY) String key,
         @Payload JobResultMessage message
     ) {
-        final Long queuePosition = jobQueue.remove(key);
-        if (queuePosition != null) {
-            notifyAllQueue();
+        log.debug("[{}] message: {}", key, message);
+
+        final UUID jobId = JobIdUtils.parseJobUuid(key);
+        if (jobId == null) {
+            log.warn("skipping wrong jobId format: {}", key);
+            return;
         }
 
-        final UUID jobId = UUID.fromString(key);
-        webSocketMessageService.sendMessage(jobId, new JobStateResponse(jobId, message.status(), message.expireAt()));
-    }
-
-    private void notifyAllQueue() {
-        final Map<String, Long> queue = new HashMap<>(jobQueue);
-        final List<String> sortedQueue = queue.entrySet().stream()
-            .sorted(Comparator.comparingLong(Map.Entry::getValue))
-            .map(Map.Entry::getKey).toList();
-
-        for (int i = 0; i < sortedQueue.size(); i++) {
-            final UUID targetJobId = UUID.fromString(sortedQueue.get(i));
-            webSocketMessageService.sendMessage(
-                targetJobId,
-                new JobQueueResponse(targetJobId, i + 1L)
-            );
-        }
+        redisService.removeJobFromQueuePositions(jobId);
+        redisService.publishResult(jobId, message);
     }
 }

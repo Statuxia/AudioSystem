@@ -89,6 +89,87 @@ class SubscriptionRegistryServiceTest {
         assertEquals(2L, queuePosition.getAsLong());
     }
 
+    @Test
+    void testDecreaseQueuePositionNotSubscribed() {
+        final UUID jobId = new UUID(0, 0);
+        final UUID jobId2 = new UUID(0, 1);
+
+        service.subscribe("sess", "sub", jobId2);
+        final OptionalLong queuePosition = service.decreaseQueuePosition(jobId, 3);
+        assertTrue(queuePosition.isEmpty());
+    }
+
+    @Test
+    void testDecreaseQueueEmptyJobArg() {
+        final UUID jobId = new UUID(0, 0);
+
+        service.subscribe("sess", "sub", jobId);
+        final OptionalLong queuePosition = service.decreaseQueuePosition(null, 3);
+        assertTrue(queuePosition.isEmpty());
+    }
+
+    @Test
+    void testDecreaseQueuePositionSubscribed() {
+        final UUID jobId = new UUID(0, 0);
+
+        service.subscribe("sess", "sub", jobId);
+        final OptionalLong queuePosition = service.decreaseQueuePosition(jobId, 3);
+        assertTrue(queuePosition.isPresent());
+        assertEquals(3L, queuePosition.getAsLong());
+    }
+
+    @Test
+    void testDecreaseQueuePositionIncreased() {
+        final UUID jobId = new UUID(0, 0);
+
+        service.subscribe("sess", "sub", jobId);
+        OptionalLong queuePosition = service.decreaseQueuePosition(jobId, 3);
+
+        assertTrue(queuePosition.isPresent());
+        assertEquals(3L, queuePosition.getAsLong());
+
+        queuePosition = service.decreaseQueuePosition(jobId, 5);
+        final OptionalLong positionExistsWithSameValue = service.getQueuePosition(jobId);
+
+        assertTrue(queuePosition.isEmpty());
+        assertTrue(positionExistsWithSameValue.isPresent());
+        assertEquals(3, positionExistsWithSameValue.getAsLong());
+    }
+
+    @Test
+    void testDecreaseQueuePositionSame() {
+        final UUID jobId = new UUID(0, 0);
+
+        service.subscribe("sess", "sub", jobId);
+        OptionalLong queuePosition = service.decreaseQueuePosition(jobId, 3);
+
+        assertTrue(queuePosition.isPresent());
+        assertEquals(3L, queuePosition.getAsLong());
+
+        queuePosition = service.decreaseQueuePosition(jobId, 3L);
+        final OptionalLong positionExistsWithSameValue = service.getQueuePosition(jobId);
+
+        assertTrue(queuePosition.isEmpty());
+        assertTrue(positionExistsWithSameValue.isPresent());
+        assertEquals(3, positionExistsWithSameValue.getAsLong());
+    }
+
+    @Test
+    void testDecreaseQueuePositionDecreased() {
+        final UUID jobId = new UUID(0, 0);
+
+        service.subscribe("sess", "sub", jobId);
+        OptionalLong queuePosition = service.decreaseQueuePosition(jobId, 3);
+
+        assertTrue(queuePosition.isPresent());
+        assertEquals(3L, queuePosition.getAsLong());
+
+        queuePosition = service.decreaseQueuePosition(jobId, 2);
+
+        assertTrue(queuePosition.isPresent());
+        assertEquals(2L, queuePosition.getAsLong());
+    }
+
     @ParameterizedTest(name = "{2}")
     @CsvSource({
         "00000000-0000-0000-0000-000000000001,00000000-0000-0000-0000-000000000000,diff jobId",

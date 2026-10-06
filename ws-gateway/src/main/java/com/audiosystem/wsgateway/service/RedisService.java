@@ -5,13 +5,17 @@ import com.audiosystem.wsgateway.dto.JobResultMessageEnvelope;
 import com.audiosystem.wsgateway.dto.JobStateItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.OptionalLong;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +37,39 @@ public class RedisService {
     public OptionalLong getJobIdRank(UUID jobId) {
         final Long rank = queuePositionsTemplate.opsForZSet().rank(QUEUE_POSITIONS_ZSET, jobId.toString());
         return rank == null ? OptionalLong.empty() : OptionalLong.of(rank + 1);
+    }
+
+    public Map<UUID, Long> getJobIdsRank(List<UUID> jobIds) {
+        if (CollectionUtils.isEmpty(jobIds)) {
+            return Collections.emptyMap();
+        }
+
+        final Map<UUID, Long> positions = new LinkedHashMap<>();
+        final List<Object> results = queuePositionsTemplate.executePipelined(
+            new SessionCallback<>() {
+                @Override
+                public Object execute(RedisOperations operations) throws DataAccessException {
+                    final ZSetOperations<String, String> zSet = operations.opsForZSet();
+                    for (UUID jobId : jobIds) {
+                        zSet.rank(
+                            QUEUE_POSITIONS_ZSET,
+                            jobId.toString()
+                        );
+                    }
+                    return null;
+                }
+            }
+        );
+
+        for (int i = 0; i < jobIds.size(); i++) {
+            final Object rank = results.get(i);
+
+            if (rank != null) {
+                positions.put(jobIds.get(i), ((Number) rank).longValue() + 1);
+            }
+        }
+
+        return positions;
     }
 
     public Boolean addJobToQueuePositions(UUID jobId) {

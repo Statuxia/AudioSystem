@@ -9,10 +9,14 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.ExponentialBackOff;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,15 +57,26 @@ public class KafkaConfiguration {
         final ConcurrentKafkaListenerContainerFactory<String, JobQueueMessage> factory
             = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(queueConsumerFactory());
+        factory.setCommonErrorHandler(redisErrorHandler());
         return factory;
     }
 
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, JobResultMessage> resultContainerFactory() {
-
         final ConcurrentKafkaListenerContainerFactory<String, JobResultMessage> factory
             = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(resultConsumerFactory());
+        factory.setCommonErrorHandler(redisErrorHandler());
         return factory;
+    }
+
+    @Bean
+    public DefaultErrorHandler redisErrorHandler() {
+        final ExponentialBackOff backOff = new ExponentialBackOff();
+        final DefaultErrorHandler handler = new DefaultErrorHandler(backOff);
+        handler.defaultFalse();
+        handler.addRetryableExceptions(RedisConnectionFailureException.class, QueryTimeoutException.class);
+
+        return handler;
     }
 }

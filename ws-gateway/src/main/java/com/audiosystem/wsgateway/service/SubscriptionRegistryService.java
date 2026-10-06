@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 
 @Service
@@ -28,6 +29,22 @@ public class SubscriptionRegistryService {
             jobId, (_, v) -> new SubscribedJobInfo(v.count(), Math.min(position, v.lastQueuePosition()))
         );
         return info == null ? OptionalLong.empty() : OptionalLong.of(info.lastQueuePosition());
+    }
+
+    public OptionalLong decreaseQueuePosition(UUID jobId, long position) {
+        if (noJobId(jobId)) return OptionalLong.empty();
+
+        final AtomicBoolean decreased = new AtomicBoolean();
+        final SubscribedJobInfo info = subscribedJobInfoRegistry.computeIfPresent(
+            jobId, (_, v) -> {
+                if (position >= v.lastQueuePosition()) {
+                    return v;
+                }
+                decreased.set(true);
+                return new SubscribedJobInfo(v.count(), position);
+            }
+        );
+        return info == null || !decreased.get() ? OptionalLong.empty() : OptionalLong.of(info.lastQueuePosition());
     }
 
     public OptionalLong getQueuePosition(UUID jobId) {
