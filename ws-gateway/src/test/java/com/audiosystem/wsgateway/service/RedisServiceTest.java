@@ -4,18 +4,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.SessionCallback;
-import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.types.Expiration;
 
+import java.time.Duration;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RedisServiceTest {
@@ -116,16 +114,43 @@ class RedisServiceTest {
     @Test
     void testAddJobToQueuePositions() {
         final UUID uuidV7 = UUID.fromString("01a1126d-915a-7339-913c-df379ead1754");
-        final long expectedTimestamp = 1791310532954L;
-        final ZSetOperations<String, String> zSetOperations = Mockito.mock(ZSetOperations.class);
-        final ArgumentCaptor<Double> captor = ArgumentCaptor.captor();
-
-        BDDMockito.doReturn(zSetOperations).when(queuePositionsTemplate).opsForZSet();
+        final String expectedTimestamp = "1791310532954";
+        final ArgumentCaptor<String> captor = ArgumentCaptor.captor();
 
         redisService.addJobToQueuePositions(uuidV7);
 
-        verify(zSetOperations).add(eq(RedisService.QUEUE_POSITIONS_ZSET), eq(uuidV7.toString()), captor.capture());
+        verify(queuePositionsTemplate).execute(
+            eq(RedisService.ADD_IF_NOT_FINISHED),
+            eq(List.of(RedisService.QUEUE_POSITIONS_ZSET, RedisService.FINISHED_KEY_PREFIX + uuidV7)),
+            captor.capture(),
+            eq(uuidV7.toString())
+        );
         assertEquals(expectedTimestamp, captor.getValue());
+    }
+
+    @Test
+    void testRemoveJobFromQueuePositionsInOrder() {
+        final UUID uuidV7 = UUID.fromString("01a1126d-915a-7339-913c-df379ead1754");
+        final ValueOperations valueOperations = mock(ValueOperations.class);
+        final ZSetOperations zSetOperations = mock(ZSetOperations.class);
+
+        BDDMockito.doReturn(valueOperations).when(queuePositionsTemplate).opsForValue();
+        BDDMockito.doReturn(zSetOperations).when(queuePositionsTemplate).opsForZSet();
+
+        redisService.removeJobFromQueuePositions(uuidV7);
+
+        final InOrder inOrder = inOrder(queuePositionsTemplate, valueOperations, zSetOperations);
+        inOrder.verify(queuePositionsTemplate).opsForValue();
+        inOrder.verify(valueOperations).set(
+            eq(RedisService.FINISHED_KEY_PREFIX + uuidV7),
+            eq("1"),
+            eq(Expiration.from(Duration.ofHours(1)))
+        );
+        inOrder.verify(queuePositionsTemplate).opsForZSet();
+        inOrder.verify(zSetOperations).remove(
+            RedisService.QUEUE_POSITIONS_ZSET,
+            uuidV7.toString()
+        );
     }
 
     private void assertSessionCallback(List<UUID> jobIds, int wantedTimes) {

@@ -10,9 +10,13 @@ import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.data.redis.core.types.Expiration;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -23,6 +27,13 @@ public class RedisService {
 
     public static final String QUEUE_POSITIONS_ZSET = "queuePositions";
     public static final String RECEIVED_JOB_RESULTS_TOPIC = "receivedJobResults";
+    public static final String FINISHED_KEY_PREFIX = "finished:";
+    public static final RedisScript<Long> ADD_IF_NOT_FINISHED = new DefaultRedisScript<>(
+        """
+            if redis.call('EXISTS', KEYS[2]) == 1 then return 0 end
+            return redis.call('ZADD', KEYS[1], ARGV[1], ARGV[2])
+            """, Long.class
+    );
 
     private final RedisTemplate<String, JobStateItem> jobStatesTemplate;
     @Qualifier("queuePositionsTemplate")
@@ -72,16 +83,22 @@ public class RedisService {
         return positions;
     }
 
-    public Boolean addJobToQueuePositions(UUID jobId) {
-        return queuePositionsTemplate.opsForZSet().add(
-            QUEUE_POSITIONS_ZSET,
-            jobId.toString(),
-            jobId.getMostSignificantBits() >>> 16
+    public void addJobToQueuePositions(UUID jobId) {
+        queuePositionsTemplate.execute(
+            ADD_IF_NOT_FINISHED,
+            List.of(QUEUE_POSITIONS_ZSET, FINISHED_KEY_PREFIX + jobId),
+            String.valueOf(jobId.getMostSignificantBits() >>> 16),
+            jobId.toString()
         );
     }
 
-    public Long removeJobFromQueuePositions(UUID jobId) {
-        return queuePositionsTemplate.opsForZSet().remove(
+    public void removeJobFromQueuePositions(UUID jobId) {
+        queuePositionsTemplate.opsForValue().set(
+            FINISHED_KEY_PREFIX + jobId,
+            "1",
+            Expiration.from(Duration.ofHours(1))
+        );
+        queuePositionsTemplate.opsForZSet().remove(
             QUEUE_POSITIONS_ZSET,
             jobId.toString()
         );
@@ -95,8 +112,8 @@ public class RedisService {
         );
     }
 
-    public Long publishResult(UUID jobId, JobResultMessage resultMessage) {
-        return receivedJobResultsTemplate.convertAndSend(
+    public void publishResult(UUID jobId, JobResultMessage resultMessage) {
+        receivedJobResultsTemplate.convertAndSend(
             RECEIVED_JOB_RESULTS_TOPIC,
             new JobResultMessageEnvelope(jobId, resultMessage)
         );
