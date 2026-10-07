@@ -35,14 +35,14 @@ class KafkaProducerServiceTest {
     private KafkaProducerService service;
 
     @Mock
-    private KafkaTemplate<String, JobQueueMessage> kafkaTemplate;
+    private KafkaTemplate<UUID, JobQueueMessage> kafkaTemplate;
 
     @Test
     void testSendMessageTimeoutException() throws ExecutionException, InterruptedException, TimeoutException {
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
         BDDMockito.doThrow(TimeoutException.class).when(mock).get(eq(10L), eq(TimeUnit.SECONDS));
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), anyString(), any(JobQueueMessage.class));
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), any(UUID.class), any(JobQueueMessage.class));
 
         assertFalse(service.sendMessage(DEFAULT_KEY, DEFAULT_MESSAGE));
         verify(mock).get(eq(10L), eq(TimeUnit.SECONDS));
@@ -53,7 +53,7 @@ class KafkaProducerServiceTest {
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
         BDDMockito.doThrow(InterruptedException.class).when(mock).get(eq(10L), eq(TimeUnit.SECONDS));
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), anyString(), any(JobQueueMessage.class));
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), any(UUID.class), any(JobQueueMessage.class));
 
         assertFalse(service.sendMessage(DEFAULT_KEY, DEFAULT_MESSAGE));
         assertTrue(Thread.interrupted());
@@ -63,16 +63,16 @@ class KafkaProducerServiceTest {
 
     @Test
     void testSendMessageException() {
-        BDDMockito.doThrow(RuntimeException.class).when(kafkaTemplate).send(anyString(), anyString(), any(JobQueueMessage.class));
+        BDDMockito.doThrow(RuntimeException.class).when(kafkaTemplate).send(anyString(), any(UUID.class), any(JobQueueMessage.class));
 
         assertFalse(service.sendMessage(DEFAULT_KEY, DEFAULT_MESSAGE));
-        verify(kafkaTemplate).send(anyString(), anyString(), any(JobQueueMessage.class));
+        verify(kafkaTemplate).send(anyString(), any(UUID.class), any(JobQueueMessage.class));
     }
 
     @Test
     void testSendMessageValid() throws ExecutionException, InterruptedException, TimeoutException {
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), anyString(), any(JobQueueMessage.class));
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(anyString(), any(UUID.class), any(JobQueueMessage.class));
 
         assertTrue(service.sendMessage(DEFAULT_KEY, DEFAULT_MESSAGE));
         verify(mock).get(eq(10L), eq(TimeUnit.SECONDS));

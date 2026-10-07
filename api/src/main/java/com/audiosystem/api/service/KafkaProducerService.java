@@ -15,11 +15,11 @@ import java.util.concurrent.TimeoutException;
 @Log4j2
 public class KafkaProducerService {
 
-    private final KafkaTemplate<String, JobQueueMessage> kafkaTemplate;
+    private final KafkaTemplate<UUID, JobQueueMessage> kafkaTemplate;
 
     public boolean sendMessage(UUID key, JobQueueMessage message) {
         try {
-            kafkaTemplate.send("queue", key.toString(), message).get(10, TimeUnit.SECONDS);
+            kafkaTemplate.send("queue", key, message).get(10, TimeUnit.SECONDS);
             return true;
         } catch (TimeoutException e) {
             log.error("timeout on sending message with key {} and message {}", key, message, e);
