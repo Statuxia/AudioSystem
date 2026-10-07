@@ -89,11 +89,15 @@ export interface JobQueueResponse {
 
 ### Задача в очереди на обработку
 topic: `queue`
+key: `job_id` (UUID строкой)
 message: `JobQueueMessage`
 
 ### Задача выполнена
 topic: `result`
+key: `job_id` (UUID строкой)
 message: `JobResultMessage`
+
+Сообщения, которые не удалось разобрать или которые не прошли проверку, уходят в `queue-dlt` и `result-dlt`. Поля, которых нет в контракте, считаются ошибкой.
 
 ```ts
 export interface JobQueueMessage {
