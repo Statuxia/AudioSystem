@@ -1,6 +1,7 @@
 package com.audiosystem.processor.service;
 
 import com.audiosystem.processor.dto.JobQueueMessage;
+import com.audiosystem.processor.dto.JobStatus;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
 import com.audiosystem.processor.utils.FileUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -90,7 +91,7 @@ class ProcessorServiceTest {
 
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -111,7 +112,7 @@ class ProcessorServiceTest {
     @ValueSource(classes = {RedisConnectionFailureException.class, QueryTimeoutException.class})
     void testProcessRedisExceptionOnRedisInQueue(Class<? extends Throwable> ex) {
         key = UUID.randomUUID();
-        BDDMockito.given(redisService.isInQueue(key)).willThrow(ex);
+        BDDMockito.given(redisService.getJobStatus(key)).willThrow(ex);
 
         assertThrows(ex, () -> processorService.process(key, SETTINGS));
 
@@ -123,7 +124,7 @@ class ProcessorServiceTest {
     @Test
     void testProcessUnknownExceptionOnRedisInQueue() {
         key = UUID.randomUUID();
-        BDDMockito.given(redisService.isInQueue(key)).willThrow(RuntimeException.class);
+        BDDMockito.given(redisService.getJobStatus(key)).willThrow(RuntimeException.class);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -136,7 +137,7 @@ class ProcessorServiceTest {
     void testProcessFailsOnS3Get() {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willThrow(RuntimeException.class);
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -158,12 +159,12 @@ class ProcessorServiceTest {
 
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
         BDDMockito.doThrow(RedisStatusUpdateException.class).when(redisService).setDone(key);
 
         assertThrows(RedisStatusUpdateException.class, () -> processorService.process(key, SETTINGS));
 
-        verify(s3Service).rollbackResult(key);
+        verify(s3Service, never()).rollbackResult(key);
         verify(s3Service).upload(any(), any());
         verify(redisService).setDone(any());
 
@@ -182,7 +183,7 @@ class ProcessorServiceTest {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willThrow(RuntimeException.class);
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -203,7 +204,7 @@ class ProcessorServiceTest {
         BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
         BDDMockito.willThrow(RuntimeException.class).given(s3Service).upload(any(), any());
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -222,7 +223,7 @@ class ProcessorServiceTest {
         key = UUID.randomUUID();
         BDDMockito.given(s3Service.get(key)).willThrow(RuntimeException.class);
         BDDMockito.willThrow(RuntimeException.class).given(s3Service).rollbackResult(key);
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
@@ -231,15 +232,46 @@ class ProcessorServiceTest {
     }
 
     @Test
-    void testNotInQueue() {
+    void testAlreadyDoneResendsDone() {
         key = UUID.randomUUID();
 
-        BDDMockito.given(redisService.isInQueue(key)).willReturn(false);
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.DONE);
 
         assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
 
-        verify(s3Service, never()).upload(any(), any());
-        verify(redisService, never()).setError(key);
-        verify(kafkaService, never()).sendErrorMessage(key);
+        verify(kafkaService).sendDoneMessage(key);
+        verify(kafkaService, never()).sendErrorMessage(any());
+        verifyNoInteractions(s3Service, audioProcessorService);
+        verify(redisService, never()).setError(any());
+        verify(redisService, never()).setDone(any());
+    }
+
+    @Test
+    void testAlreadyErrorResendsError() {
+        key = UUID.randomUUID();
+
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.ERROR);
+
+        assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
+
+        verify(kafkaService).sendErrorMessage(key);
+        verify(kafkaService, never()).sendDoneMessage(any());
+        verifyNoInteractions(s3Service, audioProcessorService);
+        verify(redisService, never()).setError(any());
+        verify(redisService, never()).setDone(any());
+    }
+
+    @Test
+    void testAlreadyDoneResendFailureIsSwallowed() {
+        key = UUID.randomUUID();
+
+        BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.DONE);
+        BDDMockito.willThrow(RuntimeException.class).given(kafkaService).sendDoneMessage(key);
+
+        assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
+
+        verifyNoInteractions(s3Service, audioProcessorService);
+        verify(redisService, never()).setError(any());
+        verify(kafkaService, never()).sendErrorMessage(any());
     }
 }

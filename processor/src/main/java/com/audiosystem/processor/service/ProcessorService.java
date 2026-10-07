@@ -2,6 +2,7 @@ package com.audiosystem.processor.service;
 
 import com.audiosystem.processor.dto.JobQueueMessage;
 import com.audiosystem.processor.dto.JobSettings;
+import com.audiosystem.processor.dto.JobStatus;
 import com.audiosystem.processor.dto.UploadFileDTO;
 import com.audiosystem.processor.exception.JobResultFileException;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
@@ -34,8 +35,10 @@ public class ProcessorService {
 
     public void process(UUID key, JobQueueMessage settings) {
         try {
-            if (!redisService.isInQueue(key)) {
-                log.debug("[{}] job already processed. Skip", key);
+            final JobStatus status = redisService.getJobStatus(key);
+            if (status != JobStatus.IN_QUEUE) {
+                log.debug("[{}] job already processed. Send message", key);
+                sendResultMessageByExistTerminalStatus(key, status);
                 return;
             }
         } catch (RedisConnectionFailureException | QueryTimeoutException ex) {
@@ -58,7 +61,6 @@ public class ProcessorService {
 
             deleteResultFile(key, settings.format());
             deleteSourceFile(key);
-            rollbackFile(key);
             throw ex; // as is
         } catch (Exception e) {
             log.error("[{}] caught exception", key, e);
@@ -151,6 +153,18 @@ public class ProcessorService {
         try {
             log.debug("[{}] sending error result message", key);
             kafkaService.sendErrorMessage(key); // produce error message to kafka
+        } catch (Exception e) {
+            log.error("[{}] caught exception on sending message to kafka", key, e);
+        }
+    }
+
+    private void sendResultMessageByExistTerminalStatus(UUID key, JobStatus state) {
+        try {
+            if (state == JobStatus.DONE) {
+                kafkaService.sendDoneMessage(key);
+            } else {
+                kafkaService.sendErrorMessage(key);
+            }
         } catch (Exception e) {
             log.error("[{}] caught exception on sending message to kafka", key, e);
         }

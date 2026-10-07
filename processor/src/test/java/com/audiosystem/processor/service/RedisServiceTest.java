@@ -38,37 +38,38 @@ class RedisServiceTest {
     private ArgumentCaptor<Long> expireAtCaptor;
 
     @Test
-    void testIsInQueueNoState() {
+    void testGetJobStateItemNoState() {
         final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
         final UUID key = UUID.randomUUID();
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
         BDDMockito.doReturn(null).when(mock).get(key.toString());
 
-        assertTrue(redisService.isInQueue(key));
+        assertEquals(JobStatus.IN_QUEUE, redisService.getJobStatus(key));
     }
 
     @Test
-    void testIsInQueueInQueueState() {
+    void testGetJobStateItemState() {
         final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
         final UUID key = UUID.randomUUID();
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
         BDDMockito.doReturn(new JobStateItem(key, JobStatus.IN_QUEUE, 0L)).when(mock).get(key.toString());
 
-        assertTrue(redisService.isInQueue(key));
+        assertEquals(JobStatus.IN_QUEUE, redisService.getJobStatus(key));
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"DONE", "ERROR"})
-    void testIsInQueueNotInQueueState(String status) {
+    void testGetJobStateItemState(String status) {
         final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
         final UUID key = UUID.randomUUID();
+        final JobStatus expectedStatus = JobStatus.valueOf(status);
 
         BDDMockito.doReturn(mock).when(redisTemplate).opsForValue();
-        BDDMockito.doReturn(new JobStateItem(key, JobStatus.valueOf(status), 0L)).when(mock).get(key.toString());
+        BDDMockito.doReturn(new JobStateItem(key, expectedStatus, 0L)).when(mock).get(key.toString());
 
-        assertFalse(redisService.isInQueue(key));
+        assertEquals(expectedStatus, redisService.getJobStatus(key));
     }
 
     @Test
