@@ -1,14 +1,19 @@
 package com.audiosystem.processor.service;
 
 import com.audiosystem.processor.dto.JobQueueMessage;
+import com.audiosystem.processor.exception.RedisStatusUpdateException;
 import com.audiosystem.processor.utils.FileUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.BDDMockito;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -20,12 +25,10 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProcessorServiceTest {
@@ -51,13 +54,6 @@ class ProcessorServiceTest {
     private UUID key;
     private Path resultPath;
     private Path srcPath;
-
-//    @BeforeEach
-//    void mockRedisStatus() {
-//        final ValueOperations<String, JobStateItem> mock = BDDMockito.mock();
-//        BDDMockito.doReturn(mock).when(redisService).isInQueue(any(UUID.class));
-//        BDDMockito.doReturn(null).when(mock).get(any());
-//    }
 
     @AfterEach
     void cleanup() throws IOException {
@@ -111,6 +107,31 @@ class ProcessorServiceTest {
         assertFalse(Files.exists(srcPath), "source file should be cleaned up");
     }
 
+    @ParameterizedTest
+    @ValueSource(classes = {RedisConnectionFailureException.class, QueryTimeoutException.class})
+    void testProcessRedisExceptionOnRedisInQueue(Class<? extends Throwable> ex) {
+        key = UUID.randomUUID();
+        BDDMockito.given(redisService.isInQueue(key)).willThrow(ex);
+
+        assertThrows(ex, () -> processorService.process(key, SETTINGS));
+
+        verifyNoInteractions(s3Service, kafkaService);
+        verify(redisService, never()).setError(key);
+        verify(redisService, never()).setDone(any());
+    }
+
+    @Test
+    void testProcessUnknownExceptionOnRedisInQueue() {
+        key = UUID.randomUUID();
+        BDDMockito.given(redisService.isInQueue(key)).willThrow(RuntimeException.class);
+
+        assertDoesNotThrow(() -> processorService.process(key, SETTINGS));
+
+        verifyNoInteractions(s3Service, kafkaService);
+        verify(redisService, never()).setError(key);
+        verify(redisService, never()).setDone(any());
+    }
+
     @Test
     void testProcessFailsOnS3Get() {
         key = UUID.randomUUID();
@@ -127,6 +148,33 @@ class ProcessorServiceTest {
         verify(s3Service, never()).upload(any(), any());
         verify(redisService, never()).setDone(any());
         verify(kafkaService, never()).sendDoneMessage(any());
+    }
+
+    @Test
+    void testProcessFailsOnRedisStateUpdate() throws IOException {
+        key = UUID.randomUUID();
+        createResultFile();
+        createSourceFile();
+
+        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
+        BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
+        BDDMockito.given(redisService.isInQueue(key)).willReturn(true);
+        BDDMockito.doThrow(RedisStatusUpdateException.class).when(redisService).setDone(key);
+
+        assertThrows(RedisStatusUpdateException.class, () -> processorService.process(key, SETTINGS));
+
+        verify(s3Service).rollbackResult(key);
+        verify(s3Service).upload(any(), any());
+        verify(redisService).setDone(any());
+
+        verify(redisService, never()).setError(key);
+        verify(kafkaService, never()).sendErrorMessage(key);
+        verify(kafkaService, never()).sendDoneMessage(any());
+
+        // important
+        verify(s3Service, never()).deleteSource(key);
+        assertFalse(Files.exists(resultPath), "result file should be cleaned up even on failure");
+        assertFalse(Files.exists(srcPath), "src file should be cleaned up even on failure");
     }
 
     @Test

@@ -4,11 +4,14 @@ import com.audiosystem.processor.dto.JobQueueMessage;
 import com.audiosystem.processor.dto.JobSettings;
 import com.audiosystem.processor.dto.UploadFileDTO;
 import com.audiosystem.processor.exception.JobResultFileException;
+import com.audiosystem.processor.exception.RedisStatusUpdateException;
 import com.audiosystem.processor.utils.ContentDispositionUtils;
 import com.audiosystem.processor.utils.FileUtils;
 import com.audiosystem.processor.utils.FormatUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.dao.QueryTimeoutException;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
@@ -35,6 +38,9 @@ public class ProcessorService {
                 log.debug("[{}] job already processed. Skip", key);
                 return;
             }
+        } catch (RedisConnectionFailureException | QueryTimeoutException ex) {
+            log.error("[{}] caught exception on getting job status. Throw up", key, ex);
+            throw ex; // as is
         } catch (Exception e) {
             log.error("[{}] caught exception on getting job status. Skip", key, e);
             return;
@@ -48,6 +54,13 @@ public class ProcessorService {
             final UploadFileDTO dto = processFile(key, sourceFile, settings);
 
             uploadAndNotify(key, dto);
+        } catch (RedisStatusUpdateException ex) {
+            log.error("[{}] caught exception", key, ex);
+
+            deleteResultFile(key, settings.format());
+            deleteSourceFile(key);
+            rollbackFile(key);
+            throw ex; // as is
         } catch (Exception e) {
             log.error("[{}] caught exception", key, e);
 

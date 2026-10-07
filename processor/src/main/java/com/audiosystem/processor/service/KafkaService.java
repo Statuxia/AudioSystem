@@ -17,25 +17,25 @@ import java.util.concurrent.TimeoutException;
 @RequiredArgsConstructor
 public class KafkaService {
 
-    private final KafkaTemplate<String, JobResultMessage> kafkaTemplate;
+    private final KafkaTemplate<UUID, JobResultMessage> kafkaTemplate;
 
-    public void sendDoneMessage(UUID key) {
+    public void sendDoneMessage(UUID jobId) {
         sendMessage(
-            key,
+            jobId,
             new JobResultMessage(JobStatus.DONE, Instant.now().plus(1, ChronoUnit.DAYS).toEpochMilli())
         );
     }
 
-    public void sendErrorMessage(UUID key) {
+    public void sendErrorMessage(UUID jobId) {
         sendMessage(
-            key,
+            jobId,
             new JobResultMessage(JobStatus.ERROR, Instant.now().toEpochMilli())
         );
     }
 
-    private void sendMessage(UUID key, JobResultMessage message) {
+    private void sendMessage(UUID jobId, JobResultMessage message) {
         try {
-            kafkaTemplate.send("result", key.toString(), message).get(10, TimeUnit.SECONDS);
+            kafkaTemplate.send("result", jobId, message).get(10, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             throw new KafkaSendMessageException("operation processes too long", e);
         } catch (InterruptedException e) {

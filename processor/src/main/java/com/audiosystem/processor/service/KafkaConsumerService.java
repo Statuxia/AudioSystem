@@ -20,19 +20,10 @@ public class KafkaConsumerService {
 
     @KafkaListener(topics = "queue", groupId = "${spring.kafka.consumer.group-id}")
     public void consumeQueueMessage(
-        @Header(KafkaHeaders.RECEIVED_KEY) String key,
+        @Header(KafkaHeaders.RECEIVED_KEY) UUID jobId,
         @Payload JobQueueMessage message
     ) {
-        log.debug("[{}] message: {}", key, message);
-
-        final UUID jobId;
-        try {
-            jobId = UUID.fromString(key);
-        } catch (IllegalArgumentException e) {
-            log.error("[{}] key is not uuid format. Skip", key, e);
-            return;
-        }
-
+        log.debug("[{}] message: {}", jobId, message);
         processorService.process(jobId, message);
     }
 }

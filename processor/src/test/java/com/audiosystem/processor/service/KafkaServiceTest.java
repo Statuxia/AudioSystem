@@ -28,7 +28,7 @@ class KafkaServiceTest {
     private KafkaService service;
 
     @Mock
-    private KafkaTemplate<String, JobResultMessage> kafkaTemplate;
+    private KafkaTemplate<UUID, JobResultMessage> kafkaTemplate;
 
     @Captor
     private ArgumentCaptor<JobResultMessage> messageCaptor;
@@ -38,7 +38,7 @@ class KafkaServiceTest {
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
         BDDMockito.doThrow(TimeoutException.class).when(mock).get(eq(10L), eq(TimeUnit.SECONDS));
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(Mockito.anyString(), Mockito.any(), Mockito.any());
 
         assertThrows(KafkaSendMessageException.class, () -> service.sendDoneMessage(UUID.randomUUID()));
         verify(mock).get(eq(10L), eq(TimeUnit.SECONDS));
@@ -49,7 +49,7 @@ class KafkaServiceTest {
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
         BDDMockito.doThrow(InterruptedException.class).when(mock).get(eq(10L), eq(TimeUnit.SECONDS));
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(Mockito.anyString(), Mockito.any(), Mockito.any());
 
         assertThrows(KafkaSendMessageException.class, () -> service.sendErrorMessage(UUID.randomUUID()));
         assertTrue(Thread.interrupted());
@@ -59,7 +59,7 @@ class KafkaServiceTest {
     @Test
     void testSendMessageGenericException() {
         BDDMockito.doThrow(RuntimeException.class)
-            .when(kafkaTemplate).send(Mockito.anyString(), Mockito.anyString(), Mockito.any());
+            .when(kafkaTemplate).send(Mockito.anyString(), Mockito.any(), Mockito.any());
 
         assertThrows(KafkaSendMessageException.class, () -> service.sendDoneMessage(UUID.randomUUID()));
     }
@@ -69,7 +69,7 @@ class KafkaServiceTest {
         final UUID key = UUID.randomUUID();
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(eq("result"), eq(key.toString()), messageCaptor.capture());
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(eq("result"), eq(key), messageCaptor.capture());
 
         assertDoesNotThrow(() -> service.sendDoneMessage(key));
         verify(mock).get(eq(10L), eq(TimeUnit.SECONDS));
@@ -84,7 +84,7 @@ class KafkaServiceTest {
         final UUID key = UUID.randomUUID();
         final CompletableFuture mock = Mockito.mock(CompletableFuture.class);
 
-        BDDMockito.doReturn(mock).when(kafkaTemplate).send(eq("result"), eq(key.toString()), messageCaptor.capture());
+        BDDMockito.doReturn(mock).when(kafkaTemplate).send(eq("result"), eq(key), messageCaptor.capture());
 
         assertDoesNotThrow(() -> service.sendErrorMessage(key));
         verify(mock).get(eq(10L), eq(TimeUnit.SECONDS));
