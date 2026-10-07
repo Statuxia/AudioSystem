@@ -14,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.UUID;
 
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class KafkaConsumerServiceTest {
@@ -29,15 +28,9 @@ class KafkaConsumerServiceTest {
     void testConsumeQueueAddJobToQueuePositions() {
         final UUID jobId = new UUID(0, 3L);
         final JobQueueMessage message = new JobQueueMessage("any", 1F, 1F);
-        kafkaConsumerService.consumeQueue(jobId.toString(), message);
+        kafkaConsumerService.consumeQueue(jobId, message);
 
         verify(redisService).addJobToQueuePositions(jobId);
-    }
-
-    @Test
-    void testConsumeQueueWrongKeyFormat() {
-        kafkaConsumerService.consumeQueue("dd", new JobQueueMessage("any", 1F, 1F));
-        verifyNoInteractions(redisService);
     }
 
     @Test
@@ -45,16 +38,10 @@ class KafkaConsumerServiceTest {
         final UUID jobId = new UUID(0, 3L);
         final JobResultMessage message = new JobResultMessage(JobStatus.DONE, 0L);
 
-        kafkaConsumerService.consumeResult(jobId.toString(), message);
+        kafkaConsumerService.consumeResult(jobId, message);
 
         final InOrder inOrder = Mockito.inOrder(redisService);
         inOrder.verify(redisService).removeJobFromQueuePositions(jobId);
         inOrder.verify(redisService).publishResult(jobId, message);
-    }
-
-    @Test
-    void testConsumeResultWrongKeyFormat() {
-        kafkaConsumerService.consumeResult("dd", new JobResultMessage(JobStatus.DONE, 0L));
-        verifyNoInteractions(redisService);
     }
 }

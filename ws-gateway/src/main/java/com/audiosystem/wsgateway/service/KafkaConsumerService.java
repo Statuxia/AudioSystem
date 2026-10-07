@@ -2,7 +2,6 @@ package com.audiosystem.wsgateway.service;
 
 import com.audiosystem.wsgateway.dto.JobQueueMessage;
 import com.audiosystem.wsgateway.dto.JobResultMessage;
-import com.audiosystem.wsgateway.utils.JobIdUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -26,17 +25,10 @@ public class KafkaConsumerService {
         containerFactory = "queueContainerFactory"
     )
     public void consumeQueue(
-        @Header(KafkaHeaders.RECEIVED_KEY) String key,
+        @Header(KafkaHeaders.RECEIVED_KEY) UUID jobId,
         @Payload JobQueueMessage message
     ) {
-        log.debug("[{}] message: {}", key, message);
-
-        final UUID jobId = JobIdUtils.parseJobUuid(key);
-        if (jobId == null) {
-            log.warn("skipping wrong jobId format: {}", key);
-            return;
-        }
-
+        log.debug("[{}] message: {}", jobId, message);
         redisService.addJobToQueuePositions(jobId);
     }
 
@@ -46,16 +38,10 @@ public class KafkaConsumerService {
         containerFactory = "resultContainerFactory"
     )
     public void consumeResult(
-        @Header(KafkaHeaders.RECEIVED_KEY) String key,
+        @Header(KafkaHeaders.RECEIVED_KEY) UUID jobId,
         @Payload JobResultMessage message
     ) {
-        log.debug("[{}] message: {}", key, message);
-
-        final UUID jobId = JobIdUtils.parseJobUuid(key);
-        if (jobId == null) {
-            log.warn("skipping wrong jobId format: {}", key);
-            return;
-        }
+        log.debug("[{}] message: {}", jobId, message);
 
         redisService.removeJobFromQueuePositions(jobId);
         redisService.publishResult(jobId, message);
