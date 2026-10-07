@@ -4,6 +4,7 @@ import com.audiosystem.wsgateway.deserializer.QueueMessageDeserializer;
 import com.audiosystem.wsgateway.deserializer.ResultMessageDeserializer;
 import com.audiosystem.wsgateway.dto.JobQueueMessage;
 import com.audiosystem.wsgateway.dto.JobResultMessage;
+import com.audiosystem.wsgateway.listener.LoggingRetryListener;
 import com.audiosystem.wsgateway.validator.ResultMessageValidator;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -109,6 +110,7 @@ public class KafkaConfiguration {
         final ExponentialBackOff backOff = new ExponentialBackOff();
         final DefaultErrorHandler handler = new DefaultErrorHandler(deadLetterPublishingRecoverer(), backOff);
         handler.defaultFalse();
+        handler.setRetryListeners(new LoggingRetryListener());
         handler.addRetryableExceptions(RedisConnectionFailureException.class, QueryTimeoutException.class);
 
         return handler;
