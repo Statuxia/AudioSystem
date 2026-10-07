@@ -39,8 +39,7 @@ public class ProcessorService {
                 return;
             }
         } catch (RedisConnectionFailureException | QueryTimeoutException ex) {
-            log.error("[{}] caught exception on getting job status. Throw up", key, ex);
-            throw ex; // as is
+            throw ex; // as is. logging in listener
         } catch (Exception e) {
             log.error("[{}] caught exception on getting job status. Skip", key, e);
             return;

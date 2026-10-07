@@ -4,6 +4,7 @@ import com.audiosystem.processor.deserializer.QueueMessageDeserializer;
 import com.audiosystem.processor.dto.JobQueueMessage;
 import com.audiosystem.processor.dto.JobResultMessage;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
+import com.audiosystem.processor.listener.LoggingRetryListener;
 import com.audiosystem.processor.recoverer.DeadLetterPublisherRecovererWrapper;
 import com.audiosystem.processor.serializer.JobResultMessageSerializer;
 import com.audiosystem.processor.service.KafkaService;
@@ -112,6 +113,7 @@ public class KafkaConfiguration {
         final ExponentialBackOff backOff = new ExponentialBackOff();
         final DefaultErrorHandler handler = new DefaultErrorHandler(dltWrapper, backOff);
         handler.defaultFalse();
+        handler.setRetryListeners(new LoggingRetryListener());
         handler.addRetryableExceptions(
             RedisConnectionFailureException.class,
             QueryTimeoutException.class,
