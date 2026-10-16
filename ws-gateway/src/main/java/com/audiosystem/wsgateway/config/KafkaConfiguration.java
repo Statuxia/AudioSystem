@@ -70,11 +70,14 @@ public class KafkaConfiguration {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<UUID, JobQueueMessage> queueContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<UUID, JobQueueMessage> queueContainerFactory(
+        @Value("${app.kafka.delivery-attempt-header:false}") boolean deliveryAttemptHeader
+    ) {
         final ConcurrentKafkaListenerContainerFactory<UUID, JobQueueMessage> factory
             = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(queueConsumerFactory());
         factory.setCommonErrorHandler(defaultErrorHandler());
+        factory.getContainerProperties().setDeliveryAttemptHeader(deliveryAttemptHeader);
         return factory;
     }
 
@@ -110,9 +113,14 @@ public class KafkaConfiguration {
         final ExponentialBackOff backOff = new ExponentialBackOff();
         final DefaultErrorHandler handler = new DefaultErrorHandler(deadLetterPublishingRecoverer(), backOff);
         handler.defaultFalse();
-        handler.setRetryListeners(new LoggingRetryListener());
+        handler.setRetryListeners(loggingRetryListener());
         handler.addRetryableExceptions(RedisConnectionFailureException.class, QueryTimeoutException.class);
 
         return handler;
+    }
+
+    @Bean
+    public LoggingRetryListener loggingRetryListener() {
+        return new LoggingRetryListener();
     }
 }
