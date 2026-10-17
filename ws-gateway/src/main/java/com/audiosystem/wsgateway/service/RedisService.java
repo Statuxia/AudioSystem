@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.RedisOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -28,11 +27,11 @@ public class RedisService {
     public static final String RECEIVED_JOB_RESULTS_TOPIC = "receivedJobResults";
     public static final String FINISHED_KEY_PREFIX = "finished:";
 
-    private final RedisTemplate<String, JobStateItem> jobStatesTemplate;
+    private final RedisOperations<String, JobStateItem> jobStatesTemplate;
     @Qualifier("queuePositionsTemplate")
-    private final RedisTemplate<String, String> queuePositionsTemplate;
+    private final RedisOperations<String, String> queuePositionsTemplate;
     @Qualifier("receivedJobResultsTemplate")
-    private final RedisTemplate<String, JobResultMessageEnvelope> receivedJobResultsTemplate;
+    private final RedisOperations<String, JobResultMessageEnvelope> receivedJobResultsTemplate;
     private final RedisScript<Long> addToQueueIfNotFinishedScript;
 
     public JobStateItem getState(UUID jobId) {

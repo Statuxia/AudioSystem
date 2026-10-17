@@ -4,7 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.RedisOperations;
+import org.springframework.data.redis.core.SessionCallback;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 
@@ -23,7 +26,7 @@ class RedisServiceTest {
     private RedisService redisService;
 
     @Mock
-    private RedisTemplate<String, String> queuePositionsTemplate;
+    private RedisOperations<String, String> queuePositionsTemplate;
 
     @Mock
     private RedisScript<Long> redisScript;
