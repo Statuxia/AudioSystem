@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.data.redis.core.types.Expiration;
 
 import java.time.Duration;
@@ -23,6 +24,9 @@ class RedisServiceTest {
 
     @Mock
     private RedisTemplate<String, String> queuePositionsTemplate;
+
+    @Mock
+    private RedisScript<Long> redisScript;
 
     @Test
     void testGetJobIdRankReturnsEmptyIfNull() {
@@ -120,7 +124,7 @@ class RedisServiceTest {
         redisService.addJobToQueuePositions(uuidV7);
 
         verify(queuePositionsTemplate).execute(
-            eq(RedisService.ADD_IF_NOT_FINISHED),
+            eq(redisScript),
             eq(List.of(RedisService.QUEUE_POSITIONS_ZSET, RedisService.FINISHED_KEY_PREFIX + uuidV7)),
             captor.capture(),
             eq(uuidV7.toString())
