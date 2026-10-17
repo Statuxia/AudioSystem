@@ -11,7 +11,7 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Instant;
@@ -29,7 +29,7 @@ class RedisServiceTest {
     private RedisService redisService;
 
     @Mock
-    private RedisTemplate<String, JobStateItem> redisTemplate;
+    private RedisOperations<String, JobStateItem> redisTemplate;
 
     @Mock
     private RedisService instance;
