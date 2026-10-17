@@ -8,7 +8,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.resilience.annotation.Retryable;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +21,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RedisService {
 
-    private final RedisTemplate<String, JobStateItem> redisTemplate;
+    private final RedisOperations<String, JobStateItem> redisTemplate;
     @Lazy
     private final RedisService instance;
 
