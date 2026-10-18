@@ -20,8 +20,11 @@ import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ExecutorChannelInterceptor;
 import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
 
 import java.util.OptionalLong;
@@ -32,9 +35,28 @@ import java.util.UUID;
 @Log4j2
 public class SubscriptionMessageInterceptor implements ExecutorChannelInterceptor {
 
+    public static final String SUBSCRIBE_DESTINATION_ERROR = "SUBSCRIBE destination must not be a pattern";
+
+    private final AntPathMatcher antPathMatcher;
     private final RedisService redisService;
     private final SubscriptionRegistryService subscriptionRegistryService;
     private final WebSocketMessageService webSocketMessageService;
+
+    @Override
+    public @Nullable Message<?> preSend(Message<?> message, MessageChannel channel) {
+        final StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+
+        if (accessor.getCommand() != StompCommand.SUBSCRIBE) {
+            return message;
+        }
+
+        if (accessor.getDestination() == null || !antPathMatcher.isPattern(accessor.getDestination())) {
+            return message;
+        }
+
+        webSocketMessageService.sendError(accessor.getSessionId(), SUBSCRIBE_DESTINATION_ERROR);
+        return null;
+    }
 
     @Override
     public void afterMessageHandled(

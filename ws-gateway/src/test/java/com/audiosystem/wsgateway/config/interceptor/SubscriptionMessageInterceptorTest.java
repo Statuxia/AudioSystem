@@ -13,10 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.BDDMockito;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.messaging.Message;
@@ -24,22 +21,25 @@ import org.springframework.messaging.MessageHandler;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.socket.messaging.WebSocketAnnotationMethodMessageHandler;
 
 import java.util.OptionalLong;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubscriptionMessageInterceptorTest {
 
+    public static final String SESSION_ID = "sess-1";
     @InjectMocks
     private SubscriptionMessageInterceptor interceptor;
 
@@ -51,6 +51,39 @@ class SubscriptionMessageInterceptorTest {
 
     @Mock
     private WebSocketMessageService webSocketMessageService;
+
+    @Spy
+    private AntPathMatcher antPathMatcher;
+
+    @ParameterizedTest
+    @MethodSource("notAPatternCases")
+    void testPreSendNotAPatternCases(StompCommand messageType, String destination) {
+        final StompHeaderAccessor accessor = StompHeaderAccessor.create(messageType);
+        accessor.setDestination(destination);
+        final Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        final Message<?> result = interceptor.preSend(message, null);
+
+        assertSame(message, result);
+        verifyNoInteractions(webSocketMessageService);
+    }
+
+    @ParameterizedTest
+    @MethodSource("patternCases")
+    void testPreSendPatternCases(String destination) {
+        final StompHeaderAccessor accessor = StompHeaderAccessor.create(StompCommand.SUBSCRIBE);
+        accessor.setDestination(destination);
+        accessor.setSessionId(SESSION_ID);
+        final Message<byte[]> message = MessageBuilder.createMessage(new byte[0], accessor.getMessageHeaders());
+
+        final Message<?> result = interceptor.preSend(message, null);
+
+        assertNull(result);
+        verify(webSocketMessageService).sendError(
+            eq(SESSION_ID),
+            eq(SubscriptionMessageInterceptor.SUBSCRIBE_DESTINATION_ERROR)
+        );
+    }
 
     @ParameterizedTest
     @MethodSource("skippedCases")
@@ -332,6 +365,41 @@ class SubscriptionMessageInterceptorTest {
         verify(redisService).getState(jobId);
         verify(redisService, never()).getJobIdRank(any());
         verify(webSocketMessageService).sendMessage(jobId, new JobStateResponse(jobId, JobStatus.ERROR, 1L));
+    }
+
+    private static Stream<Arguments> patternCases() {
+        return Stream.of(
+            Arguments.argumentSet("star", "*"),
+            Arguments.argumentSet("double star", "**"),
+            Arguments.argumentSet("single char", "?"),
+            Arguments.argumentSet("empty brackets", "{}"),
+            Arguments.argumentSet("brackets with content", "{jobId:[a-zA-Z\\-]+}")
+        );
+    }
+
+    private static Stream<Arguments> notAPatternCases() {
+        return Stream.of(
+            Arguments.argumentSet(
+                "message frame is not SUBSCRIBE",
+                StompCommand.MESSAGE,
+                "/topic/*"
+            ),
+            Arguments.argumentSet(
+                "destination is null",
+                StompCommand.SUBSCRIBE,
+                null
+            ),
+            Arguments.argumentSet(
+                "destination is not pattern",
+                StompCommand.SUBSCRIBE,
+                "/topic/job/00000000-0000-0000-0000-000000000000"
+            ),
+            Arguments.argumentSet(
+                "destination is not closed pattern",
+                StompCommand.SUBSCRIBE,
+                "/topic/job/{jobId:[a-zA-Z\\-]+"
+            )
+        );
     }
 
     private static Stream<Arguments> skippedCases() {
