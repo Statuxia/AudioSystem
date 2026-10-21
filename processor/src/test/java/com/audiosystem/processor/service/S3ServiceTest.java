@@ -1,24 +1,27 @@
 package com.audiosystem.processor.service;
 
 import com.audiosystem.processor.config.properties.S3ConfigurationProperties;
+import com.audiosystem.processor.dto.GetObjectData;
 import com.audiosystem.processor.dto.UploadFileDTO;
 import com.audiosystem.processor.exception.SourceDeleteException;
 import com.audiosystem.processor.exception.SourceDownloadException;
 import com.audiosystem.processor.exception.SourceUploadException;
+import com.audiosystem.processor.utils.FileUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.ByteArrayInputStream;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -45,6 +48,8 @@ class S3ServiceTest {
     private ArgumentCaptor<Consumer<PutObjectRequest.Builder>> putConsumerCaptor;
     @Captor
     private ArgumentCaptor<Consumer<DeleteObjectRequest.Builder>> deleteConsumerCaptor;
+    @TempDir
+    private Path tempPath;
 
     private void mockBuckets() {
         BDDMockito.given(s3ConfigurationProperties.getBucket()).willReturn(Map.of(
@@ -57,12 +62,14 @@ class S3ServiceTest {
     void testGetValid() {
         mockBuckets();
         final UUID key = UUID.randomUUID();
-        final ResponseInputStream<GetObjectResponse> mockStream = Mockito.mock(ResponseInputStream.class);
+        final Path path = FileUtils.buildSrcPath(key.toString());
+        final GetObjectResponse mockResponse = Mockito.mock(GetObjectResponse.class);
 
-        BDDMockito.doReturn(mockStream).when(s3Client).getObject(any(Consumer.class));
+        BDDMockito.doReturn(mockResponse).when(s3Client).getObject(any(Consumer.class), any(ResponseTransformer.class));
 
-        assertEquals(mockStream, service.get(key));
-        verify(s3Client).getObject(getConsumerCaptor.capture());
+        final GetObjectData result = service.get(key);
+        assertEquals(new GetObjectData(path, mockResponse), result);
+        verify(s3Client).getObject(getConsumerCaptor.capture(), any(ResponseTransformer.class));
 
         final GetObjectRequest.Builder builder = GetObjectRequest.builder();
         getConsumerCaptor.getValue().accept(builder);
@@ -76,7 +83,7 @@ class S3ServiceTest {
     void testGetThrowsSourceDownloadException() {
         final UUID key = UUID.randomUUID();
 
-        BDDMockito.doThrow(SdkException.class).when(s3Client).getObject(any(Consumer.class));
+        BDDMockito.doThrow(SdkException.class).when(s3Client).getObject(any(Consumer.class), any(ResponseTransformer.class));
 
         assertThrows(SourceDownloadException.class, () -> service.get(key));
     }
@@ -88,8 +95,7 @@ class S3ServiceTest {
         final UploadFileDTO dto = new UploadFileDTO(
             "audio/mpeg",
             "attachment; filename=\"result.mp3\"",
-            new ByteArrayInputStream(new byte[]{1, 2, 3}),
-            3L
+            tempPath
         );
 
         BDDMockito.doReturn(null).when(s3Client).putObject(any(Consumer.class), any(RequestBody.class));
@@ -111,7 +117,7 @@ class S3ServiceTest {
     void testUploadThrowsSourceUploadException() {
         final UUID key = UUID.randomUUID();
         final UploadFileDTO dto = new UploadFileDTO(
-            "audio/mpeg", "attachment", new ByteArrayInputStream(new byte[0]), 0L
+            "audio/mpeg", "attachment", Path.of("/dev/null")
         );
 
         BDDMockito.doThrow(SdkException.class).when(s3Client).putObject(any(Consumer.class), any(RequestBody.class));

@@ -1,18 +1,23 @@
 package com.audiosystem.processor.service;
 
 import com.audiosystem.processor.config.properties.S3ConfigurationProperties;
+import com.audiosystem.processor.dto.GetObjectData;
 import com.audiosystem.processor.dto.UploadFileDTO;
 import com.audiosystem.processor.exception.SourceDeleteException;
 import com.audiosystem.processor.exception.SourceDownloadException;
 import com.audiosystem.processor.exception.SourceUploadException;
+import com.audiosystem.processor.utils.FileUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.UUID;
 
 @Service
@@ -22,11 +27,24 @@ public class S3Service {
     private final S3ConfigurationProperties s3ConfigurationProperties;
     private final S3Client s3Client;
 
-    public ResponseInputStream<GetObjectResponse> get(UUID key) {
+    public GetObjectData get(UUID key) {
+        final Path srcPath = FileUtils.buildSrcPath(key.toString());
+
         try {
-            return s3Client.getObject(builder -> builder.key(key.toString())
-                .bucket(s3ConfigurationProperties.getBucket().get("client").getName())
-                .build());
+            Files.deleteIfExists(srcPath);
+        } catch (IOException e) {
+            throw new SourceDownloadException("failed to delete existed object before request", e);
+        }
+
+        try {
+            final GetObjectResponse response = s3Client.getObject(
+                builder -> builder.key(key.toString())
+                    .bucket(s3ConfigurationProperties.getBucket().get("client").getName())
+                    .build(),
+                ResponseTransformer.toFile(srcPath)
+            );
+
+            return new GetObjectData(srcPath, response);
         } catch (SdkException e) {
             throw new SourceDownloadException("failed to get object", e);
         }
@@ -41,7 +59,7 @@ public class S3Service {
                     .contentType(dto.contentType())
                     .contentDisposition(dto.contentDisposition())
                     .build(),
-                RequestBody.fromInputStream(dto.inputStream(), dto.contentLength())
+                RequestBody.fromFile(dto.resultFilePath())
             );
         } catch (SdkException e) {
             throw new SourceUploadException("failed to upload object", e);

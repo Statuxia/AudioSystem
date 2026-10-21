@@ -1,5 +1,6 @@
 package com.audiosystem.processor.service;
 
+import com.audiosystem.processor.dto.GetObjectData;
 import com.audiosystem.processor.dto.JobQueueMessage;
 import com.audiosystem.processor.dto.JobStatus;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
@@ -15,11 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -66,11 +64,11 @@ class ProcessorServiceTest {
         }
     }
 
-    private ResponseInputStream<GetObjectResponse> mockSourceFile() {
+    private GetObjectData mockSourceFile(UUID key) {
         final GetObjectResponse response = GetObjectResponse.builder()
             .metadata(Map.of("original-filename", "song"))
             .build();
-        return new ResponseInputStream<>(response, AbortableInputStream.create(new ByteArrayInputStream(new byte[0])));
+        return new GetObjectData(FileUtils.buildSrcPath(key.toString()), response);
     }
 
     private void createResultFile() throws IOException {
@@ -89,7 +87,7 @@ class ProcessorServiceTest {
         createResultFile();
         createSourceFile();
 
-        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
+        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile(key));
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
         BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
@@ -157,7 +155,7 @@ class ProcessorServiceTest {
         createResultFile();
         createSourceFile();
 
-        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
+        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile(key));
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
         BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
         BDDMockito.doThrow(RedisStatusUpdateException.class).when(redisService).setDone(key);
@@ -181,7 +179,7 @@ class ProcessorServiceTest {
     @Test
     void testProcessFailsOnAudioProcessing() {
         key = UUID.randomUUID();
-        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
+        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile(key));
         BDDMockito.given(audioProcessorService.process(any())).willThrow(RuntimeException.class);
         BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);
 
@@ -201,7 +199,7 @@ class ProcessorServiceTest {
         key = UUID.randomUUID();
         createResultFile();
 
-        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile());
+        BDDMockito.given(s3Service.get(key)).willReturn(mockSourceFile(key));
         BDDMockito.given(audioProcessorService.process(any())).willReturn(resultPath);
         BDDMockito.willThrow(RuntimeException.class).given(s3Service).upload(any(), any());
         BDDMockito.given(redisService.getJobStatus(key)).willReturn(JobStatus.IN_QUEUE);

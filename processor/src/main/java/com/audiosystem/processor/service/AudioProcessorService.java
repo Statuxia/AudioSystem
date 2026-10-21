@@ -10,9 +10,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +25,10 @@ public class AudioProcessorService {
         final String jobId = settings.getJobId();
         log.debug("[{}] start processing source file with settings: {}", jobId, settings);
 
-        final Path srcPath = FileUtils.buildSrcPath(jobId);
+        final Path srcPath = settings.getSrcPath();
         final Path resultPath = FileUtils.buildPath(jobId, settings.getFormat());
 
         try {
-            Files.copy(settings.getInputStream(), srcPath, StandardCopyOption.REPLACE_EXISTING);
-
             final ProcessBuilder processBuilder = new ProcessBuilder(buildCommand(settings, srcPath, resultPath));
             processBuilder.redirectErrorStream(true);
 

@@ -1,12 +1,11 @@
 package com.audiosystem.processor.dto;
 
 
-import java.io.InputStream;
+import java.nio.file.Path;
 
 public record UploadFileDTO(
     String contentType,
     String contentDisposition,
-    InputStream inputStream,
-    Long contentLength
+    Path resultFilePath
 ) {
 }

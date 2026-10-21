@@ -5,7 +5,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.Objects;
 
 @Getter
@@ -15,7 +15,7 @@ public class JobSettings {
     private final String jobId;
     private final String format;
     private final String contentType;
-    private final InputStream inputStream;
+    private final Path srcPath;
     private final Float speed;
     private final Float pitchSemitones;
 
@@ -24,7 +24,7 @@ public class JobSettings {
         private String jobId;
         private String format;
         private String contentType;
-        private InputStream inputStream;
+        private Path srcPath;
         private Float speed;
         private Float pitchSemitones;
 
@@ -43,8 +43,8 @@ public class JobSettings {
             return this;
         }
 
-        public Builder inputStream(InputStream inputStream) {
-            this.inputStream = inputStream;
+        public Builder srcPath(Path srcPath) {
+            this.srcPath = srcPath;
             return this;
         }
 
@@ -63,13 +63,13 @@ public class JobSettings {
                 Objects.requireNonNull(jobId, "jobId is null");
                 Objects.requireNonNull(format, "format is null");
                 Objects.requireNonNull(contentType, "contentType is null");
-                Objects.requireNonNull(inputStream, "inputStream is null");
+                Objects.requireNonNull(srcPath, "srcPath is null");
                 Objects.requireNonNull(speed, "speed is null");
                 Objects.requireNonNull(pitchSemitones, "pitchSemitones is null");
             } catch (NullPointerException e) {
                 throw new JobSettingsBuildException("one of arguments is null", e);
             }
-            return new JobSettings(jobId, format, contentType, inputStream, speed, pitchSemitones);
+            return new JobSettings(jobId, format, contentType, srcPath, speed, pitchSemitones);
         }
     }
 }

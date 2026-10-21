@@ -1,10 +1,6 @@
 package com.audiosystem.processor.service;
 
-import com.audiosystem.processor.dto.JobQueueMessage;
-import com.audiosystem.processor.dto.JobSettings;
-import com.audiosystem.processor.dto.JobStatus;
-import com.audiosystem.processor.dto.UploadFileDTO;
-import com.audiosystem.processor.exception.JobResultFileException;
+import com.audiosystem.processor.dto.*;
 import com.audiosystem.processor.exception.RedisStatusUpdateException;
 import com.audiosystem.processor.utils.ContentDispositionUtils;
 import com.audiosystem.processor.utils.FileUtils;
@@ -14,11 +10,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
@@ -50,7 +42,7 @@ public class ProcessorService {
 
         try {
             log.debug("[{}] getting client source file", key);
-            final ResponseInputStream<GetObjectResponse> sourceFile = s3Service.get(key);
+            final GetObjectData sourceFile = s3Service.get(key);
 
             log.debug("[{}] processing file with settings {}", key, settings);
             final UploadFileDTO dto = processFile(key, sourceFile, settings);
@@ -77,7 +69,7 @@ public class ProcessorService {
 
     private UploadFileDTO processFile(
         UUID key,
-        ResponseInputStream<GetObjectResponse> sourceFile,
+        GetObjectData sourceFile,
         JobQueueMessage jobMessage
     ) {
         final Map<String, String> metadata = sourceFile.response().metadata();
@@ -92,22 +84,18 @@ public class ProcessorService {
             .jobId(key.toString())
             .format(jobMessage.format())
             .contentType(contentType)
-            .inputStream(sourceFile)
+            .srcPath(sourceFile.srcPath())
             .speed(jobMessage.speed())
             .pitchSemitones(jobMessage.pitchSemitones())
             .build();
+
         final Path resultFilePath = audioProcessorService.process(jobSettings);
 
-        try {
-            return new UploadFileDTO(
-                contentType,
-                contentDisposition,
-                Files.newInputStream(resultFilePath),
-                Files.size(resultFilePath)
-            );
-        } catch (IOException e) {
-            throw new JobResultFileException("failed to process result file", e);
-        }
+        return new UploadFileDTO(
+            contentType,
+            contentDisposition,
+            resultFilePath
+        );
     }
 
     /**

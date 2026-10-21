@@ -3,7 +3,6 @@ package com.audiosystem.processor.service;
 import com.audiosystem.processor.dto.JobSettings;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -21,7 +20,7 @@ class AudioProcessorServiceTest {
             .jobId("job-1")
             .format("wav")
             .contentType("audio/wav")
-            .inputStream(InputStream.nullInputStream())
+            .srcPath(srcPath)
             .speed(1.5F)
             .pitchSemitones(4F)
             .build();
@@ -51,7 +50,7 @@ class AudioProcessorServiceTest {
             .jobId("job-2")
             .format("mp3")
             .contentType("audio/mpeg")
-            .inputStream(InputStream.nullInputStream())
+            .srcPath(srcPath)
             .speed(0.75F)
             .pitchSemitones(-4F)
             .build();
