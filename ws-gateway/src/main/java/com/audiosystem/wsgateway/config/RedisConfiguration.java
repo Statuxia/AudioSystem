@@ -4,7 +4,10 @@ import com.audiosystem.wsgateway.dto.JobResultMessageEnvelope;
 import com.audiosystem.wsgateway.dto.JobStateItem;
 import com.audiosystem.wsgateway.serializer.JobResultMessageEnvelopeSerializer;
 import com.audiosystem.wsgateway.serializer.JobStateItemSerializer;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.data.redis.autoconfigure.RedisMessageListenerContainerConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -16,12 +19,17 @@ import org.springframework.data.redis.connection.lettuce.LettuceClientConfigurat
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.RedisMessageConverters;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 @Configuration
+@Log4j2
 @EnableRedisListeners
 public class RedisConfiguration implements RedisListenerConfigurer {
 
@@ -42,6 +50,40 @@ public class RedisConfiguration implements RedisListenerConfigurer {
             .commandTimeout(Duration.ofMillis(timeout))
             .build()
         );
+    }
+
+    @Bean(defaultCandidate = false)
+    public ThreadPoolExecutor redisTaskExecutor() {
+        return new ThreadPoolExecutor(
+            4,
+            8,
+            10,
+            TimeUnit.SECONDS,
+            new ArrayBlockingQueue<>(100),
+            Thread.ofPlatform().name("redis-listener-", 1).daemon().factory(),
+            (task, executor) -> {
+                if (executor.isShutdown()) {
+                    return;
+                }
+                log.warn("Redis listener queue is full: {}. reject oldest message", executor.getQueue().size());
+                executor.getQueue().poll();
+                executor.execute(task);
+            }
+        );
+    }
+
+    @Bean
+    public RedisMessageListenerContainer redisMessageListenerContainer(
+        RedisMessageListenerContainerConfigurer configurer,
+        @Qualifier("redisTaskExecutor") ThreadPoolExecutor redisTaskExecutor
+    ) {
+        final RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        final RedisConnectionFactory connectionFactory = redisConnectionFactory();
+
+        container.setTaskExecutor(redisTaskExecutor);
+        configurer.configure(container, connectionFactory);
+
+        return container;
     }
 
     @Bean("jobStatesTemplate")
