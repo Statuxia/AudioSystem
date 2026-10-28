@@ -7,7 +7,13 @@ RUN ./gradlew --no-daemon dependencies || true
 COPY src src
 RUN ./gradlew --no-daemon bootJar
 
+FROM build AS extract
+WORKDIR /app/build/libs
+RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination ./extracted
+
+
 FROM eclipse-temurin:25-jre
+WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
 
@@ -22,6 +28,9 @@ RUN adduser \
     appuser
 USER appuser
 
-WORKDIR /app
-COPY --from=build /app/build/libs/app.jar app.jar
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=25", "-jar", "app.jar"]
+COPY --from=extract /app/build/libs/extracted/dependencies/ ./
+COPY --from=extract /app/build/libs/extracted/spring-boot-loader/ ./
+COPY --from=extract /app/build/libs/extracted/snapshot-dependencies/ ./
+COPY --from=extract /app/build/libs/extracted/application/ ./
+
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=25", "org.springframework.boot.loader.launch.JarLauncher"]
