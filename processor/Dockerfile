@@ -2,7 +2,7 @@ FROM eclipse-temurin:25-jdk AS build
 WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
-COPY lombok.config build.gradle.kts settings.gradle.kts ./
+COPY lombok.config build.gradle.kts settings.gradle.kts gradle.properties ./
 RUN ./gradlew --no-daemon dependencies || true
 COPY src src
 RUN ./gradlew --no-daemon bootJar
