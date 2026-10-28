@@ -39,4 +39,14 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+tasks.register("resolveDependencies") {
+	val classpaths = files(
+		configurations.compileClasspath,
+		configurations.runtimeClasspath,
+		configurations.annotationProcessor
+	)
+	inputs.files(classpaths)
+	doLast { println("Resolved ${classpaths.files.size} files") }
+}
+
 tasks.bootJar { archiveFileName = "app.jar" }
