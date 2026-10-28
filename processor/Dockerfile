@@ -23,5 +23,5 @@ RUN adduser \
 USER appuser
 
 WORKDIR /app
-COPY --from=build /app/build/libs/*-SNAPSHOT.jar app.jar
+COPY --from=build /app/build/libs/app.jar app.jar
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=25", "-jar", "app.jar"]
