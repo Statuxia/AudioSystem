@@ -32,6 +32,10 @@ services:
       test: ["CMD", "wget", "--spider", "-q", "localhost:8081/health"]
       interval: 30s
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 networks:
   interface:
     driver: bridge
