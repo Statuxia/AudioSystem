@@ -1,11 +1,8 @@
 plugins {
 	java
-	id("org.springframework.boot") version "4.1.1"
-	id("io.spring.dependency-management") version "1.1.7"
+	alias(libs.plugins.spring.boot)
+	alias(libs.plugins.spring.dependency.management)
 }
-
-group = "com.audiosystem"
-version = "0.0.1-SNAPSHOT"
 
 java {
 	toolchain {
@@ -22,21 +19,20 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.kafka:spring-kafka")
-	implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
+	implementation(libs.spring.webmvc.ui)
+
+	implementation(libs.awssdk.s3)
+	implementation(libs.tika.core)
+	implementation(libs.bucket4j.lettuce)
+	implementation(libs.uuid.generator)
+
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
-	compileOnly("org.projectlombok:lombok:1.18.48")
-	annotationProcessor("org.projectlombok:lombok:1.18.48")
-	testCompileOnly("org.projectlombok:lombok:1.18.48")
-	testAnnotationProcessor("org.projectlombok:lombok:1.18.48")
-
-	implementation("com.bucket4j:bucket4j_jdk17-lettuce:8.19.0")
-
-	implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
-
-	implementation("software.amazon.awssdk:s3:2.55.3")
-	implementation("org.apache.tika:tika-core:4.0.0")
+	compileOnly(libs.lombok)
+	annotationProcessor(libs.lombok)
+	testCompileOnly(libs.lombok)
+	testAnnotationProcessor(libs.lombok)
 }
 
 tasks.withType<Test> {

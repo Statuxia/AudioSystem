@@ -1,0 +1,21 @@
+[versions]
+spring-boot = "4.1.1"
+spring-dependency-management = "1.1.7"
+spring-webmvc-ui = "3.2.0"
+lombok = "1.18.48"
+awssdk-s3 = "2.55.3"
+tika-core = "4.0.0"
+bucket4j-lettuce = "8.19.0"
+uuid-generator = "5.1.0"
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }
+
+[libraries]
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+awssdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "awssdk-s3"}
+tika-core = { module = "org.apache.tika:tika-core", version.ref = "tika-core"}
+bucket4j-lettuce = { module = "com.bucket4j:bucket4j_jdk17-lettuce", version.ref = "bucket4j-lettuce"}
+uuid-generator = { module = "com.fasterxml.uuid:java-uuid-generator", version.ref = "uuid-generator"}
+spring-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "spring-webmvc-ui"}
