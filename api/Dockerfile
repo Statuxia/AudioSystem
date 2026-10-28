@@ -7,7 +7,12 @@ RUN ./gradlew --no-daemon dependencies || true
 COPY src src
 RUN ./gradlew --no-daemon bootJar
 
+FROM build AS extract
+WORKDIR /app/build/libs
+RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination ./extracted
+
 FROM eclipse-temurin:25-jre-alpine
+WORKDIR /app
 
 ARG UID=10001
 RUN adduser \
@@ -20,7 +25,10 @@ RUN adduser \
     appuser
 USER appuser
 
-WORKDIR /app
-COPY --from=build /app/build/libs/app.jar app.jar
+COPY --from=extract /app/build/libs/extracted/dependencies/ ./
+COPY --from=extract /app/build/libs/extracted/spring-boot-loader/ ./
+COPY --from=extract /app/build/libs/extracted/snapshot-dependencies/ ./
+COPY --from=extract /app/build/libs/extracted/application/ ./
+
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "org.springframework.boot.loader.launch.JarLauncher"]
