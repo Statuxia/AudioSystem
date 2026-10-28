@@ -3,7 +3,7 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle gradle
 COPY lombok.config build.gradle.kts settings.gradle.kts gradle.properties ./
-RUN ./gradlew --no-daemon dependencies || true
+RUN ./gradlew --no-daemon resolveDependencies
 COPY src src
 RUN ./gradlew --no-daemon bootJar
 
