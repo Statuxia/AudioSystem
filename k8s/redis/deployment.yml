@@ -11,6 +11,8 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: redis
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -48,5 +50,3 @@ spec:
         - name: redis-data
           persistentVolumeClaim:
             claimName: redis-data
-  strategy:
-    type: Recreate
