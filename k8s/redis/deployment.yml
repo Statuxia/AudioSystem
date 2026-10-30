@@ -19,17 +19,21 @@ spec:
       containers:
         - name: redis
           image: redis:alpine3.22
+          args: [ "redis-server", "--maxmemory", "850mb" ]
+
           ports:
             - containerPort: 6379
+
           volumeMounts:
             - name: redis-data
               mountPath: /data
+
           resources:
             limits:
               memory: 1000Mi
               cpu: "1"
               ephemeral-storage: "2Gi"
-          command: ["docker-entrypoint.sh", "--maxmemory", "850mb"]
+
       volumes:
         - name: redis-data
           persistentVolumeClaim:
