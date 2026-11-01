@@ -24,7 +24,8 @@ spec:
           args: [ "redis-server", "--maxmemory", "850mb" ]
 
           ports:
-            - containerPort: 6379
+            - name: redis
+              containerPort: 6379
 
           volumeMounts:
             - name: redis-data
