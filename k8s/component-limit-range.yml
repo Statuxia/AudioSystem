@@ -17,7 +17,7 @@ spec:
       max:
         cpu: "1"
         memory: 2000Mi
-        ephemeral-storage: "2Gi"
+        ephemeral-storage: "8Gi"
       min:
         cpu: 100m
         memory: 100Mi
