@@ -1,0 +1,71 @@
+# Silo Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: audiosystem
+  name: silo
+  labels:
+    app.kubernetes.io/name: silo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: silo
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: silo
+    spec:
+      containers:
+        - name: silo
+          image: pgsty/silo@sha256:7bb2aff6b89efe1cb1303c10fc21d579447434ed06649ac9ec05a5e2dbf30ad7 # tag RELEASE.2026-10-26T00-00-00Z
+          args: [ "server", "/data", "--console-address", ":9001" ]
+
+          ports:
+            - name: silo
+              containerPort: 9000
+
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: root-password
+
+          volumeMounts:
+            - name: silo-data
+              mountPath: /data
+
+          resources:
+            limits:
+              memory: 1000Mi
+              cpu: "1"
+              ephemeral-storage: "8Gi"
+
+          startupProbe:
+            httpGet:
+              path: /minio/health/live
+              port: silo
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: silo
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: silo
+            periodSeconds: 5
+      volumes:
+        - name: silo-data
+          persistentVolumeClaim:
+            claimName: silo-data

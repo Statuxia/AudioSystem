@@ -1,0 +1,101 @@
+# Silo init job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: audiosystem
+  name: silo-init
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: silo-init
+          image: pgsty/mc@sha256:883a5b5965c0bca4dba4f17e36f79e7d55f1aa1abea7923d9a95f97e4e1ab052 # tag RELEASE.2026-10-26T00-00-00Z
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -e
+              
+              echo "Waiting for Silo service"
+              for i in $(seq 1 60); do
+                if mc alias set silo http://silo:9000 \
+                    "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" \
+                    >/dev/null 2>&1 &&
+                   mc ls silo >/dev/null 2>&1; then
+                  break
+                fi
+                
+                if [ "$i" -eq  50 ]; then
+                  echo "Silo service is not available in time" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+              
+              mc mb --ignore-existing silo/client-sources
+              mc mb --ignore-existing silo/job-results
+              
+              cat > /tmp/objects-lifecycle.json <<'EOF'
+              {
+                "Rules": [
+                  {
+                    "ID": "expire-after-one-day",
+                    "Status": "Enabled",
+                    "Filter": {},
+                    "Expiration": {
+                      "Days": 1
+                    }
+                  }
+                ]
+              }
+              EOF
+              
+              cat > /tmp/policy.json <<'EOF'
+              {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": ["s3:GetObject"],
+                  "Resource": ["arn:aws:s3:::job-results/*"]
+                }
+              ]
+              }
+              EOF
+              
+              mc ilm import silo/client-sources < /tmp/objects-lifecycle.json
+              mc ilm import silo/job-results < /tmp/objects-lifecycle.json
+              
+              if ! mc admin user info silo "$MINIO_PRESIGNED_USER" >/dev/null 2>&1; then
+                mc admin user add silo "$MINIO_PRESIGNED_USER" "$MINIO_PRESIGNED_PASSWORD"
+              fi
+              
+              if ! mc admin policy info silo job-results-read >/dev/null 2>&1; then
+                mc admin policy create silo job-results-read /tmp/policy.json
+              fi
+              mc admin policy attach silo job-results-read --user "$MINIO_PRESIGNED_USER" || true
+
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: root-password
+            - name: MINIO_PRESIGNED_USER
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: presigned-user
+            - name: MINIO_PRESIGNED_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: silo-credentials
+                  key: presigned-password
+

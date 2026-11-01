@@ -1,0 +1,13 @@
+# Silo Service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: audiosystem
+  name: silo
+spec:
+  selector:
+    app.kubernetes.io/name: silo
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: silo
