@@ -1,6 +1,7 @@
 services:
  processor:
   build: ./processor
+  image: ghcr.io/statuxia/audiosystem-processor:latest
   deploy:
    resources:
     limits:

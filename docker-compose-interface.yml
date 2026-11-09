@@ -14,6 +14,7 @@ services:
       - interface
   api:
     build: ./api
+    image: ghcr.io/statuxia/audiosystem-api:latest
     networks:
       - interface
     healthcheck:
@@ -26,6 +27,7 @@ services:
          memory: 1G
   ws-gateway:
     build: ./ws-gateway
+    image: ghcr.io/statuxia/audiosystem-ws-gateway:latest
     networks:
       - interface
     healthcheck:
