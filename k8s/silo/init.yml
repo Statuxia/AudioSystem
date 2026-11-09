@@ -19,7 +19,7 @@ spec:
               set -e
               
               echo "Waiting for Silo service"
-              for i in $(seq 1 60); do
+              for i in $(seq 1 50); do
                 if mc alias set silo http://silo:9000 \
                     "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" \
                     >/dev/null 2>&1 &&
