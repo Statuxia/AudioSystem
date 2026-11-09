@@ -102,8 +102,10 @@ flowchart LR
 ### Скрипт startup.sh
 
 ```bash
-./startup.sh [-kafka compact|common] [--build|--no-build]
+./startup.sh [up|down] [-kafka compact|common] [--build|--no-build]
 ```
+
+- `up/down` запустить или остановить сервисы
 
 - `-kafka` позволяет выбрать между compact или common файлом compose. по умолчанию выбирает `compact` значение.
 

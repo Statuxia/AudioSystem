@@ -5,6 +5,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 kafka=compact
 build_flag=--no-build
+action=up
 required_vars=(
   AUDIOSYSTEM_SILO_ROOT_USER
   AUDIOSYSTEM_SILO_ROOT_PASSWORD
@@ -25,13 +26,20 @@ while (($#)); do
      shift 2
      ;;
    --no-build)
+     build_flag=--no-build
+     shift
      ;;
    --build)
      build_flag=--build
+     shift
+     ;;
+   up|down)
+     action="$1"
+     shift
      ;;
    *)
      echo "Ошибка. Неизвестный аргумент: $1" >&2
-     echo "Использование: ./startup.sh [-kafka compact|common] [--build|--no-build]" >&2
+     echo "Использование: ./startup.sh [up|down] [-kafka compact|common] [--build|--no-build]" >&2
      exit 1
      ;;
    esac
@@ -47,11 +55,13 @@ case "$kafka" in
    ;;
 esac
 
-for name in "${required_vars[@]}"; do
-  if [[ -z "${!name:-}" ]]; then
-    missing+=("$name")
-  fi
-done
+if [[ $action == "up" ]]; then
+  for name in "${required_vars[@]}"; do
+    if [[ -z "${!name:-}" ]]; then
+      missing+=("$name")
+    fi
+  done
+fi
 
 if (( ${#missing[@]} > 0 )); then
   echo "Не заданы обязательные переменные: ${missing[*]}"
@@ -82,10 +92,16 @@ if (( ${#missing[@]} > 0 )); then
   fi
 fi
 
-exec docker compose \
- -f docker-compose-interface.yml \
- -f "$kafka_compose_file" \
- -f docker-compose-redis.yml \
- -f docker-compose-silo.yml \
- -f docker-compose-processor.yml \
- up "$build_flag" "$@"
+compose_files=(
+  -f docker-compose-interface.yml
+  -f "$kafka_compose_file"
+   -f docker-compose-redis.ym
+   -f docker-compose-silo.yml
+   -f docker-compose-processor.yml
+)
+
+if [[ $action == "down" ]]; then
+  exec docker compose "${compose_files[@]}" down
+else
+  exec docker compose "${compose_files[@]}" up "${build_flag}"
+fi
