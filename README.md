@@ -99,6 +99,18 @@ flowchart LR
 
 Все сервисы собираются и поднимаются через `docker compose` с явным списком файлов — у compose-конфигурации нет файла по умолчанию, это осознанный выбор (комбинации ниже взаимоисключающие или дополняющие).
 
+Перед запуском необходимо установить следующий список environment'ов, заменив значение в треугольных скобках:
+```bash
+# Silo
+export AUDIOSYSTEM_SILO_ROOT_USER='silo-s3'
+export AUDIOSYSTEM_SILO_ROOT_PASSWORD='<password>'
+export AUDIOSYSTEM_SILO_PRESIGNED_USER='silo-presigned'
+export AUDIOSYSTEM_SILO_PRESIGNED_PASSWORD='<password>'
+
+# Kafka
+export AUDIOSYSTEM_KAFKA_KRAFT_CLUSTER_ID='<cluster-id>'
+```
+
 Базовый стек (интерфейс + Kafka в компактном варианте + Redis + Silo + processor):
 
 ```bash

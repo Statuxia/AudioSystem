@@ -2,10 +2,10 @@ services:
  silo-init:
   image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
   environment:
-   - MINIO_ROOT_USER=silo-s3
-   - MINIO_ROOT_PASSWORD=abcdefghijklmnopqrstuvwxyz
-   - MINIO_PRESIGNED_USER=silo-presigned
-   - MINIO_PRESIGNED_PASSWORD=abcdefghijklmnop
+   - MINIO_ROOT_USER=${AUDIOSYSTEM_SILO_ROOT_USER}
+   - MINIO_ROOT_PASSWORD=${AUDIOSYSTEM_SILO_ROOT_PASSWORD}
+   - MINIO_PRESIGNED_USER=${AUDIOSYSTEM_SILO_PRESIGNED_USER}
+   - MINIO_PRESIGNED_PASSWORD=${AUDIOSYSTEM_SILO_PRESIGNED_PASSWORD}
   entrypoint: ["/bin/sh", "-c"]
   command:
    - |
@@ -39,8 +39,8 @@ services:
   ports:
    - "9000:9000"
   environment:
-   - MINIO_ROOT_USER=silo-s3
-   - MINIO_ROOT_PASSWORD=abcdefghijklmnopqrstuvwxyz
+   - MINIO_ROOT_USER=${AUDIOSYSTEM_SILO_ROOT_USER}
+   - MINIO_ROOT_PASSWORD=${AUDIOSYSTEM_SILO_ROOT_PASSWORD}
   volumes:
    - silo_data:/data
   healthcheck:
@@ -54,19 +54,19 @@ services:
   environment:
    - MINIO_SERVER=silo:9000
    - MINIO_PORT=9000
-   - MINIO_ROOT_USER=silo-s3
-   - MINIO_ROOT_PASSWORD=abcdefghijklmnopqrstuvwxyz
+   - MINIO_ROOT_USER=${AUDIOSYSTEM_SILO_ROOT_USER}
+   - MINIO_ROOT_PASSWORD=${AUDIOSYSTEM_SILO_ROOT_PASSWORD}
    - MINIO_CLIENT_BUCKET_NAME=client-sources
    - MINIO_RESULT_BUCKET_NAME=job-results
-   - MINIO_PRESIGNED_USER=silo-presigned
-   - MINIO_PRESIGNED_PASSWORD=abcdefghijklmnop
+   - MINIO_PRESIGNED_USER=${AUDIOSYSTEM_SILO_PRESIGNED_USER}
+   - MINIO_PRESIGNED_PASSWORD=${AUDIOSYSTEM_SILO_PRESIGNED_PASSWORD}
   networks:
    - s3
  processor:
   environment:
    - MINIO_SERVER=silo:9000
-   - MINIO_ROOT_USER=silo-s3
-   - MINIO_ROOT_PASSWORD=abcdefghijklmnopqrstuvwxyz
+   - MINIO_ROOT_USER=${AUDIOSYSTEM_SILO_ROOT_USER}
+   - MINIO_ROOT_PASSWORD=${AUDIOSYSTEM_SILO_ROOT_PASSWORD}
    - MINIO_CLIENT_BUCKET_NAME=client-sources
    - MINIO_RESULT_BUCKET_NAME=job-results
   networks:
