@@ -95,7 +95,7 @@ fi
 compose_files=(
   -f docker-compose-interface.yml
   -f "$kafka_compose_file"
-   -f docker-compose-redis.ym
+   -f docker-compose-redis.yml
    -f docker-compose-silo.yml
    -f docker-compose-processor.yml
 )
