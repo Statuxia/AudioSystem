@@ -1,0 +1,52 @@
+# Kafka init job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  namespace: audiosystem
+  name: kafka-init
+spec:
+  activeDeadlineSeconds: 300
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: kafka-init
+          image: bitnamilegacy/kafka@sha256:aa0b2aee8c5610dd1d18d48b4f1df0dbe3267b5d4c338d36c9af9cbf0529c0b0
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              set -e \
+              
+              echo "Waiting for Kafka service"
+              for i in $(seq 1 50); do
+                if /opt/bitnami/kafka/bin/kafka-broker-api-versions.sh \
+                    --bootstrap-server kafka:9092 \
+                    >/dev/null 2>&1; then
+                  break
+                fi
+              
+                if [ "$i" -eq  50 ]; then
+                  echo "Kafka service is not available in time" >&2
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+              --topic queue --partitions ${KAFKA_TOPIC_PARTITIONS} --replication-factor ${KAFKA_REPLICATION_FACTOR} \
+
+              kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+              --topic result --partitions ${KAFKA_TOPIC_PARTITIONS} --replication-factor ${KAFKA_REPLICATION_FACTOR} \
+
+              kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+              --topic queue-dlt --partitions ${KAFKA_TOPIC_PARTITIONS} --replication-factor ${KAFKA_REPLICATION_FACTOR} \
+
+              kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+              --topic result-dlt --partitions ${KAFKA_TOPIC_PARTITIONS} --replication-factor ${KAFKA_REPLICATION_FACTOR} \
+
+          env:
+            - name: KAFKA_TOPIC_PARTITIONS
+              value: "3"
+            - name: KAFKA_REPLICATION_FACTOR
+              value: "3"
