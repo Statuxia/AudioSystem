@@ -1,0 +1,15 @@
+# Kafka Service
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: audiosystem
+  name: kafka
+spec:
+  selector:
+    app.kubernetes.io/name: kafka
+  clusterIP: None
+  publishNotReadyAddresses: true
+  ports:
+    - protocol: TCP
+      port: 9092
+      name: kafka
